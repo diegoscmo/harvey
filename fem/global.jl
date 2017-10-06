@@ -6,13 +6,11 @@ function Global(nelems,ijk,ID,K0,densidades,simp,nforcas,nos_forcas,ngl_efetivos
      I = zeros(Int64,8*8*nelems)
      J = zeros(Int64,8*8*nelems)
      V = zeros(8*8*nelems)
-     Kele = copy(K0)
      for el = 1:nelems
-       
-       # rotina para determinacao dos vetores para montagem da matriz esparsa
-       fator = densidades[el]^simp
-       (glg,gll) = gl_livres_elemento(el,ijk,ID)
-       @inbounds  for i = 1:length(glg)
+        # rotina para determinacao dos vetores para montagem da matriz esparsa
+        fator::Float64 = densidades[el]^simp
+        (glg,gll) = gl_livres_elemento(el,ijk,ID)
+         @inbounds  for i = 1:length(glg)
                         glgi =  glg[i]
                         glli =  gll[i]
                         @inbounds for j = 1: length(glg)
@@ -20,7 +18,7 @@ function Global(nelems,ijk,ID,K0,densidades,simp,nforcas,nos_forcas,ngl_efetivos
                                   gllj =  gll[j]
                                   I[contador] = glgi
                                   J[contador] = glgj
-       	                          V[contador] = Kele[glli,gllj]*fator
+       	                          V[contador] = K0[glli,gllj]*fator
                                   contador = contador + 1
                         end #j
        end #i

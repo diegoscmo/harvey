@@ -1,172 +1,172 @@
 # Funções para quad4 (pesos de integração omitidos == 1.0)
 
 # Rotina que calcula a matriz de rigidez de um elemento da malha
-function Kquad4(ele::Int64, coord::Array{Float64,2},ijk::Array{Int64,2},
-               young::Float64, poisson::Float64, esp::Float64)
+function Kquad4(elem::Int64, coordx::Array{Float64,2}, conect::Array{Int64,2},
+    elast::Float64, poiss::Float64, espess::Float64)
 
-# Define os arrays locais
-  B  = zeros(Float64,3,8)
-  no_coord = zeros(Float64,2,4);
-  K = zeros(Float64,8,8);
-  DJ = 0.0
+    # Define os arrays locais
+    B  = zeros(Float64,3,8)
+    nos = zeros(Float64,2,4);
+    K = zeros(Float64,8,8);
+    DJ = 0.0
 
-# Nos do elemento
-  no = ijk[ele,:]
+    # Determina as coordxenadas dos nós
+    for i=1:4
+        nos[1,i] = coordx[conect[elem,i],1]
+        nos[2,i] = coordx[conect[elem,i],2]
+    end
 
-# determina as coordenadas dos nos
-  for i=1:4
-     no_coord[1,i] = coord[no[i],1]
-     no_coord[2,i] = coord[no[i],2]
-  end
+    # tabela de pontos de Gauss
+    valor = 1.0/sqrt(3.0)
+    gpoint = [ -valor    valor     valor   -valor ;
+    -valor   -valor     valor    valor ]
 
-# tabela de pontos de Gauss
-   valor = 1.0/sqrt(3.0)
-   gpoint = [ -valor    valor     valor   -valor ;
-              -valor   -valor     valor    valor ]
+    # Agora define o tensor constitutivo EPT
+    com = (elast/(1.0-poiss^2));
+    De = [  com          com*poiss   0.0 ;
+    com*poiss    com         0.0 ;
+    0.0          0.0         com*(1.0-poiss)/2.0 ]
 
-# Agora define o tensor constitutivo EPT
-   com = (young/(1.0-poisson^2));
-   De = [      com               com*poisson          0.0 ;
-           com*poisson              com               0.0 ;
-               0.0                  0.0           com*(1.-poisson)/2.0 ]
-
-# Integra numericamente com 4 pontos de Gauss
-   for p=1:4
-       (B,DJ) = Bquad4(gpoint[1,p],gpoint[2,p],no_coord)
+    # Integra numericamente com 4 pontos de Gauss
+    for p=1:4
+        (B,DJ) = Bquad4(gpoint[1,p],gpoint[2,p],nos)
         K = K + (B'*De*B)*DJ;
-   end
+    end
 
-# multiplica pela espessura
-   K = K*esp
+    # multiplica pela espess
+    K = K*espess
 
-# Fim da funcao Kquad4
-  return K
+    # Fim da funcao Kquad4
+    return K
 
 end #Kquad4
 
 function Nquad4(r::Float64,s::Float64)
 
     # As funcoes de interpolacao
-          N1 = 1.0/4.0*(1.0-r)*(1.0-s)
-          N2 = 1.0/4.0*(1.0+r)*(1.0-s)
-          N3 = 1.0/4.0*(1.0+r)*(1.0+s)
-          N4 = 1.0/4.0*(1.0-r)*(1.0+s)
+    N1 = 0.25*(1.0-r)*(1.0-s)
+    N2 = 0.25*(1.0+r)*(1.0-s)
+    N3 = 0.25*(1.0+r)*(1.0+s)
+    N4 = 0.25*(1.0-r)*(1.0+s)
 
     # E o vetor com as funcoes
-          N = [N1 N2 N3 N4]
+    #N = [N1 N2 N3 N4]
 
-         # N = [N1 0.0 N2 0.0 N3 0.0 N4 0.0
-        #       0.0 N1 0.0 N2 0.0 N3 0.0 N4]
+    N = [N1  0.0 N2  0.0 N3  0.0 N4  0.0
+    0.0 N1  0.0 N2  0.0 N3  0.0 N4]
 
-          return N
+    return N
 
-      end
+end
 
-function Bquad4(r::Float64,s::Float64,coord::Array{Float64,2})
+function Bquad4(r::Float64,s::Float64,nos::Array{Float64,2})
 
-# Define as dimensoes dos arrays locais
-      J    = zeros(Float64,2,2)
-      invJ = zeros(Float64,2,2)
-      Ae   = zeros(Float64,4)
-      Be   = zeros(Float64,4)
+    # Criando matrizes necessarias
+    J    = Array{Float64}(2,2)
+    invJ = Array{Float64}(2,2)
+    DN   = Array{Float64}(2,4)
+    B    = Array{Float64}(3,8)
 
-# Calcula a matriz jacobiana
-       t1 = -1.0+s
-       t4 = +1.0+s
-      t13 = -1.0+r
-      t15 = -1.0-r
-       J  = 0.25* [(t1*coord[1,1]-t1*coord[1,2]+t4*coord[1,3]-t4*coord[1,4]) (t1*coord[2,1]-t1*coord[2,2]+t4*coord[2,3]-t4*coord[2,4]) ;
-             (t13*coord[1,1]+t15*coord[1,2]-t15*coord[1,3]-t13*coord[1,4]) (t13*coord[2,1]+t15*coord[2,2]-t15*coord[2,3]-t13*coord[2,4])]
+    #DN eh a matriz com as derivadas da funcao de forma em relacao a r e s
+    DN[1,1] = (-1.0+s)/4.0
+    DN[1,2] = (+1.0-s)/4.0
+    DN[1,3] = (+1.0+s)/4.0
+    DN[1,4] = (-1.0-s)/4.0
+    DN[2,1] = (-1.0+r)/4.0
+    DN[2,2] = (-1.0-r)/4.0
+    DN[2,3] = (+1.0+r)/4.0
+    DN[2,4] = (+1.0-r)/4.0
 
-# Inverte a matriz jacobiana
-   invJ = inv(J)
+    #Calculo da matriz jacobiana
+    J  = DN*nos'
 
-# Monta a matriz B
-# dNi/dr
-      Ae[1] = invJ[1,1]*t1+invJ[1,2]*t13
-      Ae[2] = -invJ[1,1]*t1+invJ[1,2]*t15
-      Ae[3] = invJ[1,1]*t4-invJ[1,2]*t15
-      Ae[4] = -invJ[1,1]*t4-invJ[1,2]*t13
+    #Inverte a matriz jacobiana
+    invJ = inv(J)
 
-# dNi/ds
-      Be[1] = invJ[2,1]*t1+invJ[2,2]*t13
-      Be[2] = -invJ[2,1]*t1+invJ[2,2]*t15
-      Be[3] = invJ[2,1]*t4-invJ[2,2]*t15
-      Be[4] = -invJ[2,1]*t4-invJ[2,2]*t13
-# B
-      B = 0.25* [ Ae[1]    0.0  Ae[2]    0.0  Ae[3]    0.0  Ae[4]    0.0 ;
-                    0.0  Be[1]    0.0  Be[2]    0.0  Be[3]    0.0  Be[4] ;
-                  Be[1]  Ae[1]  Be[2]  Ae[2]  Be[3]  Ae[3]  Be[4]  Ae[4] ]
+    #calcula o determinante da matriz Jacobiana
+    DetJ = det(J)
 
-# calcula o determinante da matriz Jacobiana
-      DJ = det(J)
+    #Monta a matriz B
+    Baux = invJ*DN
+    for i=1:2:2*size(Baux,2)
+        B[1,i]   = Baux[1,Int((i+1)/2)]
+        B[2,i+1] = Baux[2,Int((i+1)/2)]
+        B[3,i]   = Baux[2,Int((i+1)/2)]
+        B[3,i+1] = Baux[1,Int((i+1)/2)]
+    end
 
-# Fim da rotina Bquad4
-  return B, DJ
+    # Fim da rotina Bquad4
+    return B, DetJ
 
 end
 
 
-function Mquad4(ele::Int64, coord::Array{Float64,2},ijk::Array{Int64,2},
-               esp::Float64,rho::Float64)
+function Mquad4(elem::Int64, coordx::Array{Float64,2},conect::Array{Int64,2},
+    espess::Float64,rho::Float64)
 
-# Define as dimensoes dos arrays locais
-         M    = zeros(Float64,4,4)
-    nos_coord = zeros(Float64,2,4)
+    # Define as dimensoes dos arrays locais
+    M   = zeros(Float64,8,8)
+    nos = zeros(2,4)
 
-# Determina as coordenadas dos nos
+    # determina as coordxenadas dos nos
     for i=1:4
-      pos = convert(Int64,ijk[ele,i])
-      nos_coord[:,i] = coord[pos,:]
+        nos[1,i] = coordx[conect[elem,i],1]
+        nos[2,i] = coordx[conect[elem,i],2]
     end
 
-# Tabela de pontos de Gauss
+    # Tabela de pontos de Gauss
     valor = 1.0/sqrt(3.0)
     gpoint = [ -valor    valor     valor   -valor ;
                -valor   -valor     valor    valor ]
 
-# Integra nos quatro pontos de Gauss
+    # Integra nos quatro pontos de Gauss
     for p=1:4
-      (B,DJ) = Bquad4(gpoint[1,p],gpoint[2,p],nos_coord)
-      Nr     = Nquad4(gpoint[1,p],gpoint[2,p])
-      M = M + rho*(Nr'*Nr)*DJ
+        (B,DJ) = Bquad4(gpoint[1,p],gpoint[2,p],nos)
+        Nr     = Nquad4(gpoint[1,p],gpoint[2,p])
+        M      = M + rho*(Nr'*Nr)*DJ
     end
-# Multiplica pela espura
-    M = M * esp
+    # Multiplica pela espura
+    M = M * espess
 
 end
 
 
-function Sigma_quad4(r::Float64,s::Float64,ele::Int64,U::Array{Float64,1},
-                             coord::Array{Float64,2},ijk::Array{Int64,2},
-                                          young::Float64,poisson::Float64)
 
-# Define as dimensões e zera os arrays locais
-        sigma = zeros(3,1)
-        eps   = zeros(3,1)
-    ele_coord = zeros(2,4)
+#################################3
 
-# Determina as coordenadas dos nos
+
+
+
+function Sigma_quad4(r::Float64,s::Float64,elem::Int64,U::Array{Float64,1},
+    coordx::Array{Float64,2},conect::Array{Int64,2},
+    elast::Float64,poiss::Float64)
+
+    # Define as dimensões e zera os arrays locais
+    sigma = zeros(3,1)
+    eps   = zeros(3,1)
+    ele_coordx = zeros(2,4)
+
+    # Determina as coordxenadas dos nos
     for i=1:4
-      pos = convert(Int64,ijk[ele,i])
-      ele_coord[:,i] = coord[pos,:]
+        pos = convert(Int64,conect[elem,i])
+        ele_coordx[:,i] = coordx[pos,:]
     end
 
-# Agora define o tensor constitutivo EPT
-   comum = (young/(1.0-poisson^2))
-   De = [   comum             comum*poisson          0.0;
-            comum*poisson     comum                  0.0;
-            0.0                 0.0           comum*(1.0-poisson)/2.0 ]
+    # Agora define o tensor constitutivo EPT
+    comum = (elast/(1.0-poiss^2))
+    De = [   comum             comum*poiss          0.0;
+    comum*poiss     comum                  0.0;
+    0.0                 0.0           comum*(1.0-poiss)/2.0 ]
 
-# Extrai os deslocamentos do vetor global.
-  no  = ijk[ele,:]
-  pos = [2*no[1]-1; 2*no[1]; 2*no[2]-1;  2*no[2];
-         2*no[3]-1; 2*no[3]; 2*no[4]-1;  2*no[4]]
+    # Extrai os deslocamentos do vetor global.
+    no  = conect[elem,:]
+    pos = [2*no[1]-1; 2*no[1]; 2*no[2]-1;  2*no[2];
+    2*no[3]-1; 2*no[3]; 2*no[4]-1;  2*no[4]]
 
-# Recupera matriz B para o ponto de integracao.
-  (B,) = Bquad4(r,s,ele_coord)
+    # Recupera matriz B para o ponto de integracao.
+    (B,) = Bquad4(r,s,ele_coordx)
 
-# Relaciona deformação e tensão.
+    # Relaciona deformação e tensão.
     eps   = B*U[pos]
     sigma = De*eps
 
@@ -174,48 +174,48 @@ function Sigma_quad4(r::Float64,s::Float64,ele::Int64,U::Array{Float64,1},
 end
 
 
-function Tensoes_quad4(nelems::Int64,coord::Array{Float64,2},ijk::Array{Int64,2},
-                            young::Float64,poisson::Float64,U::Array{Float64,1})
+function Tensoes_quad4(nelems::Int64,coordx::Array{Float64,2},conect::Array{Int64,2},
+    elast::Float64,poiss::Float64,U::Array{Float64,1})
 
-# Matriz com as tensoes (Sxx, Syy, Sxy).
+    # Matriz com as tensoes (Sxx, Syy, Sxy).
     tensoes = zeros(nelems,3)
 
-# Tensão no centróide de cada elemento (r=0.0, s=0.0):
-    for ele=1:nelems
-      sigma = Sigma_quad4(0.0,0.0,ele,U,coord,ijk,young,poisson)
-      tensoes[ele,:] = sigma'
+    # Tensão no centróide de cada elemento (r=0.0, s=0.0):
+    for elem=1:nelems
+        sigma = Sigma_quad4(0.0,0.0,elem,U,coordx,conect,elast,poiss)
+        tensoes[elem,:] = sigma'
     end #fors
     return tensoes
 end #Tensoes_quad4
 
 
-function Fquad4(ele::Int64,coord::Array{Float64,2},ijk::Array{Int64,2},
-                               esp::Float64,sigma::Float64)
+function Fquad4(elem::Int64,coordx::Array{Float64,2},conect::Array{Int64,2},
+    espess::Float64,sigma::Float64)
 
-# Sigma é a tensão calculada no elemento - Cte para o bilinear isoparamétrico
+    # Sigma é a tensão calculada no elemento - Cte para o bilinear isoparamétrico
 
-# Define as dimensões e zera os arrays.
-    nos_coord = zeros(2,4)
-      forcas  = zeros(4,1)
+    # Define as dimensões e zera os arrays.
+    nos_coordx = zeros(2,4)
+    forcas  = zeros(4,1)
 
-# Determina as coordenadas dos nos
+    # Determina as coordxenadas dos nos
     for i=1:4
-      pos = convert(Int64,ijk[ele,i])
-      nos_coord[:,i] = coord[pos,:]
+        pos = convert(Int64,  conect[elem,i])
+        nos_coordx[:,i] = coordx[pos,:]
     end
 
-# Tabela de pontos de Gauss
+    # Tabela de pontos de Gauss
     valor = 1.0/sqrt(3.0)
     gpoint = [ -valor    valor     valor   -valor ;
-               -valor   -valor     valor    valor ]
+    -valor   -valor     valor    valor ]
 
-# Integra nos quatro pontos de Gauss
+    # Integra nos quatro pontos de Gauss
     for p=1:4
-      (B,DJ) = Bquad4(gpoint[1,p],gpoint[2,p],nos_coord)
-      Nr     = Nquad4(gpoint[1,p],gpoint[2,p])
-      forcas = forcas + 1.0*(Nr'*sigma)*DJ # 1.0 eh a densidade
+        (B,DJ) = Bquad4(gpoint[1,p],gpoint[2,p],nos_coordx)
+        Nr     = Nquad4(gpoint[1,p],gpoint[2,p])
+        forcas = forcas + 1.0*(Nr'*sigma)*DJ # 1.0 eh a densidade
     end
-    forcas = forcas*esp
+    forcas = forcas*espess
 
     return forcas
 end #Fquad4

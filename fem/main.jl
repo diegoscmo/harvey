@@ -17,17 +17,19 @@ include("global.jl")            # Global, Expande_Vetor
 
 # Definição geométrica do problema (retângulo):
 LX = 1.0       # Comprimento em X
-LY = 0.5       # Comprimento em Y
+LY = 0.1       # Comprimento em Y
 
 # Malha:
-NX = 8        # Nr. de elementos em X
-NY = 4        # Nr. de elementos em Y
+NX = 100        # Nr. de elementos em X
+NY = 10        # Nr. de elementos em Y
 
 # Material:
 young   = 210E9     # Módulo de Young
-poisson = 0.30      # Coeficiente de Poisson (0.0 > viga)
-esp     = 0.01      # Espessura do retângulo
-rho     = 7850.0    # Densidade
+poisson = 0.0     # Coeficiente de Poisson (0.0 > viga)
+esp     = 1.0       # Espessura do retângulo
+rho     = 7860.0    # Densidade
+
+#w = 4.730041^2*sqrt((young*LY^2)/(12*rho*LX^4))/2/pi
 
 # Restrições de deslocamento (apoios):
 #        [ ponto_X_inicial ponto_Y_inicial ponto_X_final ponto_Y_final direção (X=1 Y=2)]
@@ -42,15 +44,15 @@ forcas = [ LX              LY/2.0          -9000.0         2 ]
 # Dados calculados e declaração de variáveis:
 npresos = size(presos,1)       # Nr. de apoios
 nforcas = size(forcas,1)       # Nr. de carregamentos
-nelems = NX*NY                 # Nr. de elementos
-nnos = (NX+1)*(NY+1)           # Nr. de nós
+nelems  = NX*NY                   # Nr. de elementos
+nnos    = (NX+1)*(NY+1)           # Nr. de nós
 
 ################################################################################
-# Rotina principal:
+# Rotina principal
 ################################################################################
 
-  # Gera a malha com o menor elemento do tamanho H novo nos cantos
-  coord,ijk,nos_forcas,ID,nr_gl_livres = GeraMalha(LX,LY,NX,NY,npresos,presos,nforcas,forcas,lx_el,ly_el,false)
+  # Gera a malha
+  coord,ijk,nos_forcas,ID,nr_gl_livres = GeraMalha(LX,LY,NX,NY,npresos,presos,nforcas,forcas)
   # Onde:
   # coord = matriz com a posição de cada nó [x,y]
   # ijk = matriz conectividade
@@ -59,14 +61,13 @@ nnos = (NX+1)*(NY+1)           # Nr. de nós
   # nr_gl_livres = número de graus de liberdades livres (tamanho da matriz esparsa)
 
   # Gera a matriz de rigidez de um elemento finito - malha toda igual
-  K0 = Kquad4(1,coord,ijk,young,poisson,esp)
-  M0 = Mquad4(1,coord,ijk,esp,rho)
+  K0 = 4.0*Kquad4(1,coord,ijk,young,poisson,esp)
+  M0 = 4.0*Mquad4(1,coord,ijk,esp,rho)
 
   # Parametro p do SIMP
   simp = 3.0
   # Pseudo-densidades para a montagem global com o SIMP
-  dens    = ones(nelems)
-  dens[:] = 0.49
+  dens = 0.49*ones(nelems)
 
   # Monta matriz de rigidez Global
   KG,F = Global(nelems,ijk,ID,K0,dens,simp,nforcas,nos_forcas,nr_gl_livres)
@@ -81,21 +82,22 @@ nnos = (NX+1)*(NY+1)           # Nr. de nós
   end #for i
 
   # Monta matriz de massa Global
-  MG,F = Global(nelems,ijk,ID,M0,dens,simp,nforcas,nos_forcas,nr_gl_livres)
+  MG, = Global(nelems,ijk,ID,M0,dens,simp,nforcas,nos_forcas,nr_gl_livres)
 
   # Amortecimento proporcional de Rayleigh
   alf = 0.0
-  bet = 1.0E-8
+  bet = 0.0
   CG = alf*MG + bet*KG
 
-  maxfreq  = 10000
-  stepfreq = 10
+  maxfreq  = 300
+  stepfreq = 5
   a = []
   b = []
 
   # Análise Harmônica, varredura
+  #while false
   for f = 0:stepfreq:maxfreq
-  KD = KG + im*f*CG - f^2*MG
+  KD = KG + 2*pi*f*im*CG - (2*pi*f)^2*MG
 
   # Soluciona o sistema de equações
   C = lufact(KD)
@@ -114,8 +116,8 @@ nnos = (NX+1)*(NY+1)           # Nr. de nós
   end
 
   # Plota Flexibilidade Dinamica
-  ZZ = plot(a,log.(b))
+  z = plot(a,log.(b))
 
   # Cálculo rápido de autovalores
-  vals = extrema(real(sqrt.(eigvals(full(KG),full(MG)))))
-  print(vals)
+  autov = eigs(KG,MG,nev=3,which=:SM)[1]
+  print(sqrt.(autov)/(2.0*pi))
