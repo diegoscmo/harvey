@@ -2,7 +2,9 @@
 ################################################################################
 # Elementos Finitos - Calculo Harmonico
 ################################################################################
-# cd(ENV["HARVEY"]); cd("fem")
+# cd(ENV["HARVEY"]); cd("fem");
+
+using Plots
 
 # Carrega os arquivos com as rotinas auxiliares
 include("gera_malha.jl")        # GeraMalha, gl_livres_elemento, Testa_Malha
@@ -23,7 +25,7 @@ NY = 4        # Nr. de elementos em Y
 
 # Material:
 young   = 210E9     # Módulo de Young
-poisson = 0.30       # Coeficiente de Poisson (0.0 > viga)
+poisson = 0.30      # Coeficiente de Poisson (0.0 > viga)
 esp     = 0.01      # Espessura do retângulo
 rho     = 7850.0    # Densidade
 
@@ -42,8 +44,6 @@ npresos = size(presos,1)       # Nr. de apoios
 nforcas = size(forcas,1)       # Nr. de carregamentos
 nelems = NX*NY                 # Nr. de elementos
 nnos = (NX+1)*(NY+1)           # Nr. de nós
-lx_el = LX/convert(Float64,NX) # Comprimento do elemento em X
-ly_el = LY/convert(Float64,NY) # Comprimento do elemento em Y
 
 ################################################################################
 # Rotina principal:
@@ -85,14 +85,17 @@ ly_el = LY/convert(Float64,NY) # Comprimento do elemento em Y
 
   # Amortecimento proporcional de Rayleigh
   alf = 0.0
-  bet = 0.0 #1.0E-8
+  bet = 1.0E-8
   CG = alf*MG + bet*KG
 
-  nfreq = 250
-  Y = zeros(nfreq)
+  maxfreq  = 10000
+  stepfreq = 10
+  a = []
+  b = []
+
   # Análise Harmônica, varredura
-  for freq=1:nfreq
-  KD = KG + im*freq*CG - freq^2*MG
+  for f = 0:stepfreq:maxfreq
+  KD = KG + im*f*CG - f^2*MG
 
   # Soluciona o sistema de equações
   C = lufact(KD)
@@ -103,7 +106,16 @@ ly_el = LY/convert(Float64,NY) # Comprimento do elemento em Y
   Fe = Expande_Vetor(F,nnos,ID)
 
   # Flexibilidade dinamica
-  Y[freq] = abs(U'*Fe)^2
+  Y = abs(U'*Fe)^2
+
+  push!(a,f)
+  push!(b,Y)
+
   end
 
-writedlm("test.txt", Y, ", ")
+  # Plota Flexibilidade Dinamica
+  ZZ = plot(a,log.(b))
+
+  # Cálculo rápido de autovalores
+  vals = extrema(real(sqrt.(eigvals(full(KG),full(MG)))))
+  print(vals)

@@ -55,6 +55,9 @@ function Nquad4(r::Float64,s::Float64)
     # E o vetor com as funcoes
           N = [N1 N2 N3 N4]
 
+         # N = [N1 0.0 N2 0.0 N3 0.0 N4 0.0
+        #       0.0 N1 0.0 N2 0.0 N3 0.0 N4]
+
           return N
 
       end
