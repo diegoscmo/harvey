@@ -1,14 +1,26 @@
-function Global(nelems,ijk,ID,K0,densidades,simp,nforcas,nos_forcas,ngl_efetivos)
+function Global(nelems,ijk,ID,K0,M0,densidades,simp,nforcas,nos_forcas,ngl_efetivos)
 
-     # Monta a matriz Global de Rigidez
+    # Corrige os fatores densidade para a massa (Olhoff e Du)
+    massadens = copy(densidades)
+    C1 =  6.0E5
+    C2 = -5.0E6
+    for i=1:nelems
+        if massadens[i] < 0.1
+            massadens[i] = C1*massadens[i]^6 + C2*massadens[i]^7
+        end #if dens[i]
+    end #for i
+
+     # Monta a matriz Global de Rigidez e Massa
      contador = 1
 
      I = zeros(Int64,8*8*nelems)
      J = zeros(Int64,8*8*nelems)
      V = zeros(8*8*nelems)
+     W = zeros(8*8*nelems)
      for el = 1:nelems
         # rotina para determinacao dos vetores para montagem da matriz esparsa
-        fator::Float64 = densidades[el]^simp
+        kfator::Float64 = densidades[el]^simp
+        mfator::Float64 = massadens[el]
         (glg,gll) = gl_livres_elemento(el,ijk,ID)
          @inbounds  for i = 1:length(glg)
                         glgi =  glg[i]
@@ -18,7 +30,8 @@ function Global(nelems,ijk,ID,K0,densidades,simp,nforcas,nos_forcas,ngl_efetivos
                                   gllj =  gll[j]
                                   I[contador] = glgi
                                   J[contador] = glgj
-       	                          V[contador] = K0[glli,gllj]*fator
+       	                          V[contador] = K0[glli,gllj]*kfator
+                                  W[contador] = M0[glli,gllj]*mfator
                                   contador = contador + 1
                         end #j
        end #i
@@ -27,6 +40,7 @@ function Global(nelems,ijk,ID,K0,densidades,simp,nforcas,nos_forcas,ngl_efetivos
     contador = contador - 1
 
     KG = sparse(I[1:contador],J[1:contador],V[1:contador])
+    MG = sparse(I[1:contador],J[1:contador],W[1:contador])
 
     # Monta o vetor de forcas
     F = zeros(ngl_efetivos)
@@ -48,7 +62,7 @@ function Global(nelems,ijk,ID,K0,densidades,simp,nforcas,nos_forcas,ngl_efetivos
     end
 
 
-    return KG,F
+    return KG,MG,F
 end
 
 
