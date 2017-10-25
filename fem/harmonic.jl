@@ -17,7 +17,10 @@ KD = K + 2*pi*f*im*C - (2*pi*f)^2*M
 U,Fe = FEM_Solve(KD,F,nnos,ID)
 
 # Flexibilidade dinamica
-Y = abs(U'*Fe)^2
+# Expande o vetor de deslocamentos, adicionando os graus de liberdade travados:
+Uc  = Expande_Vetor(U,nnos,ID)
+Fc = Expande_Vetor(F,nnos,ID)
+Y = abs(Uc'*Fc)^2
 
 push!(fs,f)
 push!(ha,Y)
@@ -33,11 +36,7 @@ function FEM_Solve(KD,F,nnos,ID)
 
     # Soluciona o sistema de equações
     L = lufact(KD)
-    U_sem_zeros = vec(L\F)
+    U = vec(L\F)
 
-    # Expande o vetor de deslocamentos, adicionando os graus de liberdade travados:
-    U  = Expande_Vetor(U_sem_zeros,nnos,ID)
-    Fe = Expande_Vetor(F,nnos,ID)
-
-    return U,Fe
+    return U,F
 end

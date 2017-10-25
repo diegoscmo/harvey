@@ -4,7 +4,7 @@ function Line_Search(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Float
     # Define um valor minimo de passo
     const minimo = 1E-6
     # E o passo inicial
-    const delta = 1.0
+    const delta = 0.1
 
     # Aoca as variaveis da rotina
     const alfa = 0.0
@@ -16,7 +16,7 @@ function Line_Search(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Float
     const Ll = 0.
 
     # Bloqueio do alpha
-    alpha = 1e100
+    alpha = 1e10
     a_check = alpha
     for j=1:size(x,1)
         if dir[j]<0.

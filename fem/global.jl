@@ -4,9 +4,10 @@ function Global(nelems,ijk,ID,K0,M0,densidades,simp,nforcas,nos_forcas,ngl_efeti
     massadens = copy(densidades)
     C1 =  6.0E5
     C2 = -5.0E6
-    for i=1:nelems
-        if massadens[i] < 0.1
-            massadens[i] = C1*massadens[i]^6 + C2*massadens[i]^7
+    # Corrige massa de acordo com Olhoff & Du
+    for j=1:nelems
+        if massadens[j] < 0.1
+            massadens[j] = C1*massadens[j]^6 + C2*massadens[j]^7
         end #if dens[i]
     end #for i
 
@@ -19,8 +20,9 @@ function Global(nelems,ijk,ID,K0,M0,densidades,simp,nforcas,nos_forcas,ngl_efeti
      W = zeros(8*8*nelems)
      for el = 1:nelems
         # rotina para determinacao dos vetores para montagem da matriz esparsa
-        kfator::Float64 = densidades[el]^simp
-        mfator::Float64 = massadens[el]
+        # Modificação Olhoff & Du pag 94/95 eq 5.19-20
+        kfator::Float64 = (0.001+densidades[el]*(0.999))^simp
+        mfator::Float64 = (0.001+massadens[el]*(0.999))
         (glg,gll) = gl_livres_elemento(el,ijk,ID)
          @inbounds  for i = 1:length(glg)
                         glgi =  glg[i]

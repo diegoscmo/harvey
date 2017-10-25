@@ -20,7 +20,7 @@ function LS_Backtracing(x, mult_res, rho, dir, xl, xu, dL, tol_int, count)
     const direita = -cc*dot(dL,dir)
 
   # Verifica se não temos um alfa limite. Do contrário, utilizamos o máximo
-    const alfa = 10.0
+    const alfa = 0.5
 
   # Bloqueio alpha
     a = +Inf

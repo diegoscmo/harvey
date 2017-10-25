@@ -21,8 +21,8 @@ LX = 1.0       # Comprimento em X
 LY = 0.5       # Comprimento em Y
 
 # Malha:
-NX = 200        # Nr. de elementos em X
-NY = 100        # Nr. de elementos em Y
+NX = 20        # Nr. de elementos em X
+NY = 10        # Nr. de elementos em Y
 
 # Material:
 young   = 210E9     # Módulo de Young

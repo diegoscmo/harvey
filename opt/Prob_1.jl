@@ -18,7 +18,7 @@ numres = 1
 x=[5. ; 5.]
 
 # Limites laterais
-xl=[0.  ; 0.]
+xl=[0.  ; 2.]
 xu=[10. ;10.]
 
 # esperado 3. e 2.

@@ -1,7 +1,7 @@
 ################################################################################
 # Lagrangiano Aumentado
 ################################################################################
-# cd(ENV["TOPOPT"]) >> diretório da variável de sistema
+# cd(ENV["TOPOPT"]); cd("opt"); >> diretório da variável de sistema
 
 # Carrega a biblioteca de funções auxiliáres
 include("F_Lagrangiana.jl")
@@ -29,17 +29,17 @@ valor_fun,valor_res = F_Obj(x)
 mult_res = zeros(numres)
 
 # Define fator de penalização inicial (c)
-rho = max(1E-6,min(rho_max,(2.*abs(valor_fun)/norm(max(valor_res,0.))^2.)))
+rho = max.(1E-6,min(rho_max,(2.*abs(valor_fun)/norm(max.(valor_res,0.))^2.)))
 
 # E calcula o criterio de atualizacao do c
-crho_ant = max(0.,norm(norm(max(valor_res, -mult_res/rho))))
+crho_ant = max.(0.,norm(norm(max.(valor_res, -mult_res/rho))))
 
 # Inicializa o contador de avaliacoes da F_Obj
 count = 1
 
 # Dá o display e inicializa o laço externo
 println("\n LagAug:: ",descent," // ",search)
-@time for i_ext=1:max_ext
+for i_ext=1:max_ext
 
   # Display do valor atual
   @printf("\n  iter: %d \t fitness: %.3e \t \n x: \t",i_ext, valor_fun)
@@ -52,26 +52,22 @@ println("\n LagAug:: ",descent," // ",search)
 
   # Atualiza o valor o multiplicador das restricoes (u)
   valor_fun,valor_res = F_Obj(x)
-  mult_res = min.(mult_max,max(rho*valor_res + mult_res, 0.))
+  mult_res = min.(mult_max,max.(rho*valor_res + mult_res, 0.))
 
   # Atualiza o multiplicador de penalizacao (c)
-  crho_nov = max(0.,norm(norm(max(valor_res, -mult_res/rho))))
+  crho_nov = max.(0.,norm(norm(max.(valor_res, -mult_res/rho))))
   if crho_nov >= .9*crho_ant
-    rho = min(1.1*rho, rho_max)
+    rho = min.(1.1*rho, rho_max)
   end # if
   crho_ant = copy(crho_nov)
 
   # Verifica os criterios:
   if norm(dL) <= tol_ext &&                 # Condicao de gradiente
-     norm(max(valor_res,0.)) <= tol_ext &&   # Condicao de viabilidade
+     norm(max.(valor_res,0.)) <= tol_ext &&   # Condicao de viabilidade
      norm(valor_res'*mult_res) < tol_ext #&&  # Condicao de complementariedade
      #sum(valor_res .>= 0.) == numres         # Verific. dos mult. de desigualdade  #!modificado 05/10
       break
   end # if criterios
-
-
-    println("\n Grad: ",norm(dL) <= tol_ext," Viab: ",norm(max(valor_res,0.)) <= tol_ext,
-    " Comp: ",norm(valor_res'*mult_res) < tol_ext," Desig: ",sum(valor_res .>= -tol_ext) == numres)
 
 end # for i_ext
 
@@ -80,5 +76,3 @@ println("\n Aval. da F_Obj = [$count]")
 println("\n   Pt de minimo = $x")
 println("\n     Valor de F = [$valor_fun]")
 println("\n     Restricoes = $valor_res")
-
-#A = [2*(x[1]-3) + rho*mult_res, 2*(x[2]-2) + rho*mult_res]

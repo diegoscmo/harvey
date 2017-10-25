@@ -4,8 +4,7 @@ function BFGS(x::Array{Float64,1},mult_res::Array{Float64,1},rho::Float64,xl::Ar
   numvar = size(x,1)
 
   # Calcula o gradiente de L
-  dL = Dif_Fin(x, mult_res, rho)
-  count += 1 + numvar
+  dL,count = Dif_Fin(x, mult_res, rho, count)
 
   # inicializa aproximacao da hessiana
   G = eye(Float64,numvar)
@@ -23,13 +22,15 @@ function BFGS(x::Array{Float64,1},mult_res::Array{Float64,1},rho::Float64,xl::Ar
       break
     end
 
-    # Bloqueia a direcao
+    # Bloqueia a direcao e zera o gradiente se bloquado
     for j=1:numvar
       if dir[j] < 0.0 && x[j] <= xl[j]
         dir[j] = 0.0
+        dL[j]  = 0.0
       end
       if dir[j] > 0.0 && x[j] >= xu[j]
         dir[j] = 0.0
+        dL[j]  = 0.0
       end
     end
 
@@ -42,7 +43,14 @@ function BFGS(x::Array{Float64,1},mult_res::Array{Float64,1},rho::Float64,xl::Ar
     # Regaculta o gradiente e a norma
     dL_ant = copy(dL)
     dL = Dif_Fin(x, mult_res, rho)
-    count += 1 + numvar
+    count += 2*numvar
+
+    # Remove a derivada de direções bloqueadas
+    for j=1:numvar
+        if dL_ant[j]==0.0
+            dL[j] = 0.0
+        end
+    end
 
     # Se houver atualizacao na derivada,
     y = dL - dL_ant

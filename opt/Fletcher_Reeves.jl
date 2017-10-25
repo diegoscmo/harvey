@@ -5,8 +5,7 @@ function Fletcher_Reeves(x::Array{Float64,1},mult_res::Array{Float64,1},rho::Flo
   dL = zeros(Float64,numvar)
 
   # Calcula o gradiente de L
-  dL = Dif_Fin(x, mult_res, rho)
-  count += 1 + numvar
+  dL,count = Dif_Fin(x, mult_res, rho, count)
 
   # Calcula a norma para criterio de parada interno
   norma = norm(dL)
@@ -21,13 +20,15 @@ function Fletcher_Reeves(x::Array{Float64,1},mult_res::Array{Float64,1},rho::Flo
       break
     end
 
-    # Bloqueia a direcao
+    # Bloqueia a direcao e zera o gradiente se bloqueado
     for j=1:numvar
       if dir[j] < 0.0 && x[j] <= xl[j]
         dir[j] = 0.0
+        dL[j]  = 0.0
       end
       if dir[j] > 0.0 && x[j] >= xu[j]
         dir[j] = 0.0
+        dL[j]  = 0.0
       end
     end
 

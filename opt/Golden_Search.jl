@@ -85,7 +85,7 @@ function Golden_Search(x::Array{Float64,1}, u::Array{Float64,1}, c::Float64,
       # Recalcula delta com o maior dir
       (dir,ind) = findmax(dir)
       delta = L[ind]/dir
-      println(delta)
+     # println(delta)
 
       # Se delta ficar muito pequeno, define como o minimo
       if delta < minimo
