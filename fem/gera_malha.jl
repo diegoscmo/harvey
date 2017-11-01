@@ -184,21 +184,3 @@ function gl_livres_elemento(elemento::Int64,ijk::Array{Int64,2},ID::Array{Int64,
     return (glg[1:contador_global],gll[1:contador_global])
 
 end
-
-# Gera um arquivo com a coordenada do centro de cada elemento
-function Coord_Centros(coord,conect,nelems)
-
-    centros = zeros(Float64,nelems,2)
-    for j=1:nelems
-        nos = conect[j,:]
-        for k = 1:4
-            centros[j,1] = centros[j,1]+coord[nos[k],1]
-            centros[j,2] = centros[j,2]+coord[nos[k],2]
-        end # for k
-
-    end # for j
-
-    centros = centros/4.0
-
-    return centros
-end

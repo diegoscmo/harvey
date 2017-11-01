@@ -6,6 +6,9 @@ function Steepest(x::Array{Float64,1},mult_res::Array{Float64,1},rho::Float64,xl
 
   for i=1:max_int
 
+    # Aplica filtro de densidade 65
+    x = Filtra_Dens(x)
+
     # Calcula o gradiente de L
     dL,count = Dif_Fin(x, mult_res, rho, count)
 
@@ -35,7 +38,7 @@ function Steepest(x::Array{Float64,1},mult_res::Array{Float64,1},rho::Float64,xl
 
     # incrementa a estimativa do ponto
     x = x + alpha*dir
-    #Adiciona_Vista_Escalar_Gmsh("zgmsh",string("dens ",string(mean(x))),nelems,x,Float64(count))
+
   end #for i
   return x,dL,count
 end #function
