@@ -1,0 +1,411 @@
+
+  LagAug:: Steep // Line // 2017-11-08-14-35-51
+
+  Nelems:: 3200 // Iter:: 100/50 // Tol:: 0.0001/0.0001
+
+  Filtro:: Dens // raiof:: 0.04 // pSIMP 3.0 // freq: 5.0
+
+  iter: 0 		fitness: 1.0000	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.0]
+		val. restrições: [-2.50344e-15]
+
+  iter: 1 		fitness: 0.3080	volume:	0.603 
+   rho: 1.00 	 mult. lagrange: [0.221125]
+		val. restrições: [0.221125]
+
+  iter: 2 		fitness: 0.2844	volume:	0.609 
+   rho: 1.00 	 mult. lagrange: [0.454882]
+		val. restrições: [0.233757]
+
+  iter: 3 		fitness: 0.2801	volume:	0.600 
+   rho: 1.00 	 mult. lagrange: [0.67141]
+		val. restrições: [0.216528]
+
+  iter: 4 		fitness: 0.3012	volume:	0.567 
+   rho: 1.00 	 mult. lagrange: [0.822607]
+		val. restrições: [0.151197]
+
+  iter: 5 		fitness: 0.3468	volume:	0.517 
+   rho: 1.00 	 mult. lagrange: [0.87552]
+		val. restrições: [0.0529131]
+
+  iter: 6 		fitness: 0.3567	volume:	0.500 
+   rho: 1.00 	 mult. lagrange: [0.896036]
+		val. restrições: [0.0205159]
+
+  iter: 7 		fitness: 0.3586	volume:	0.494 
+   rho: 1.00 	 mult. lagrange: [0.902991]
+		val. restrições: [0.00695465]
+
+  iter: 8 		fitness: 0.3591	volume:	0.489 
+   rho: 1.00 	 mult. lagrange: [0.900909]
+		val. restrições: [-0.00208226]
+
+  iter: 9 		fitness: 0.3584	volume:	0.485 
+   rho: 1.00 	 mult. lagrange: [0.891509]
+		val. restrições: [-0.00939994]
+
+  iter: 10 		fitness: 0.3561	volume:	0.481 
+   rho: 1.00 	 mult. lagrange: [0.874552]
+		val. restrições: [-0.0169568]
+
+  iter: 11 		fitness: 0.3511	volume:	0.478 
+   rho: 1.00 	 mult. lagrange: [0.850147]
+		val. restrições: [-0.0244046]
+
+  iter: 12 		fitness: 0.3444	volume:	0.475 
+   rho: 1.00 	 mult. lagrange: [0.820006]
+		val. restrições: [-0.0301415]
+
+  iter: 13 		fitness: 0.3400	volume:	0.474 
+   rho: 1.00 	 mult. lagrange: [0.788329]
+		val. restrições: [-0.0316765]
+
+  iter: 14 		fitness: 0.3364	volume:	0.474 
+   rho: 1.00 	 mult. lagrange: [0.757068]
+		val. restrições: [-0.0312614]
+
+  iter: 15 		fitness: 0.3300	volume:	0.475 
+   rho: 1.00 	 mult. lagrange: [0.728204]
+		val. restrições: [-0.0288643]
+
+  iter: 16 		fitness: 0.3218	volume:	0.477 
+   rho: 1.00 	 mult. lagrange: [0.703103]
+		val. restrições: [-0.0251007]
+
+  iter: 17 		fitness: 0.3150	volume:	0.479 
+   rho: 1.00 	 mult. lagrange: [0.681302]
+		val. restrições: [-0.0218007]
+
+  iter: 18 		fitness: 0.3072	volume:	0.481 
+   rho: 1.00 	 mult. lagrange: [0.663243]
+		val. restrições: [-0.018059]
+
+  iter: 19 		fitness: 0.2991	volume:	0.482 
+   rho: 1.00 	 mult. lagrange: [0.648123]
+		val. restrições: [-0.0151196]
+
+  iter: 20 		fitness: 0.2927	volume:	0.483 
+   rho: 1.00 	 mult. lagrange: [0.63389]
+		val. restrições: [-0.0142337]
+
+  iter: 21 		fitness: 0.2880	volume:	0.483 
+   rho: 1.00 	 mult. lagrange: [0.620252]
+		val. restrições: [-0.0136382]
+
+  iter: 22 		fitness: 0.2842	volume:	0.483 
+   rho: 1.00 	 mult. lagrange: [0.606921]
+		val. restrições: [-0.0133302]
+
+  iter: 23 		fitness: 0.2809	volume:	0.483 
+   rho: 1.00 	 mult. lagrange: [0.593723]
+		val. restrições: [-0.013198]
+
+  iter: 24 		fitness: 0.2771	volume:	0.483 
+   rho: 1.00 	 mult. lagrange: [0.580704]
+		val. restrições: [-0.0130192]
+
+  iter: 25 		fitness: 0.2727	volume:	0.483 
+   rho: 1.00 	 mult. lagrange: [0.56712]
+		val. restrições: [-0.0135841]
+
+  iter: 26 		fitness: 0.2697	volume:	0.483 
+   rho: 1.00 	 mult. lagrange: [0.553385]
+		val. restrições: [-0.0137351]
+
+  iter: 27 		fitness: 0.2665	volume:	0.483 
+   rho: 1.00 	 mult. lagrange: [0.540021]
+		val. restrições: [-0.0133642]
+
+  iter: 28 		fitness: 0.2630	volume:	0.483 
+   rho: 1.00 	 mult. lagrange: [0.526536]
+		val. restrições: [-0.0134848]
+
+  iter: 29 		fitness: 0.2597	volume:	0.483 
+   rho: 1.00 	 mult. lagrange: [0.512878]
+		val. restrições: [-0.0136579]
+
+  iter: 30 		fitness: 0.2563	volume:	0.483 
+   rho: 1.00 	 mult. lagrange: [0.498673]
+		val. restrições: [-0.0142049]
+
+  iter: 31 		fitness: 0.2530	volume:	0.483 
+   rho: 1.00 	 mult. lagrange: [0.484217]
+		val. restrições: [-0.0144559]
+
+  iter: 32 		fitness: 0.2497	volume:	0.483 
+   rho: 1.00 	 mult. lagrange: [0.469572]
+		val. restrições: [-0.0146454]
+
+  iter: 33 		fitness: 0.2472	volume:	0.483 
+   rho: 1.00 	 mult. lagrange: [0.455619]
+		val. restrições: [-0.0139528]
+
+  iter: 34 		fitness: 0.2439	volume:	0.484 
+   rho: 1.00 	 mult. lagrange: [0.443342]
+		val. restrições: [-0.0122769]
+
+  iter: 35 		fitness: 0.2403	volume:	0.484 
+   rho: 1.00 	 mult. lagrange: [0.432318]
+		val. restrições: [-0.0110239]
+
+  iter: 36 		fitness: 0.2382	volume:	0.485 
+   rho: 1.00 	 mult. lagrange: [0.422429]
+		val. restrições: [-0.00988879]
+
+  iter: 37 		fitness: 0.2353	volume:	0.486 
+   rho: 1.00 	 mult. lagrange: [0.414374]
+		val. restrições: [-0.00805544]
+
+  iter: 38 		fitness: 0.2336	volume:	0.486 
+   rho: 1.00 	 mult. lagrange: [0.406795]
+		val. restrições: [-0.00757884]
+
+  iter: 39 		fitness: 0.2313	volume:	0.486 
+   rho: 1.00 	 mult. lagrange: [0.399807]
+		val. restrições: [-0.00698838]
+
+  iter: 40 		fitness: 0.2292	volume:	0.486 
+   rho: 1.00 	 mult. lagrange: [0.392942]
+		val. restrições: [-0.00686471]
+
+  iter: 41 		fitness: 0.2275	volume:	0.486 
+   rho: 1.00 	 mult. lagrange: [0.385252]
+		val. restrições: [-0.00768962]
+
+  iter: 42 		fitness: 0.2259	volume:	0.486 
+   rho: 1.00 	 mult. lagrange: [0.377215]
+		val. restrições: [-0.008037]
+
+  iter: 43 		fitness: 0.2245	volume:	0.486 
+   rho: 1.00 	 mult. lagrange: [0.369428]
+		val. restrições: [-0.00778791]
+
+  iter: 44 		fitness: 0.2229	volume:	0.486 
+   rho: 1.00 	 mult. lagrange: [0.361817]
+		val. restrições: [-0.00761037]
+
+  iter: 45 		fitness: 0.2214	volume:	0.486 
+   rho: 1.00 	 mult. lagrange: [0.354072]
+		val. restrições: [-0.00774557]
+
+  iter: 46 		fitness: 0.2201	volume:	0.486 
+   rho: 1.00 	 mult. lagrange: [0.346524]
+		val. restrições: [-0.00754788]
+
+  iter: 47 		fitness: 0.2184	volume:	0.487 
+   rho: 1.00 	 mult. lagrange: [0.339716]
+		val. restrições: [-0.00680745]
+
+  iter: 48 		fitness: 0.2167	volume:	0.486 
+   rho: 1.00 	 mult. lagrange: [0.332644]
+		val. restrições: [-0.0070723]
+
+  iter: 49 		fitness: 0.2151	volume:	0.486 
+   rho: 1.00 	 mult. lagrange: [0.32494]
+		val. restrições: [-0.00770422]
+
+  iter: 50 		fitness: 0.2135	volume:	0.485 
+   rho: 1.00 	 mult. lagrange: [0.315707]
+		val. restrições: [-0.00923299]
+
+  iter: 51 		fitness: 0.2120	volume:	0.485 
+   rho: 1.00 	 mult. lagrange: [0.305938]
+		val. restrições: [-0.00976855]
+
+  iter: 52 		fitness: 0.2105	volume:	0.485 
+   rho: 1.00 	 mult. lagrange: [0.296166]
+		val. restrições: [-0.00977194]
+
+  iter: 53 		fitness: 0.2089	volume:	0.485 
+   rho: 1.00 	 mult. lagrange: [0.286903]
+		val. restrições: [-0.00926372]
+
+  iter: 54 		fitness: 0.2073	volume:	0.486 
+   rho: 1.00 	 mult. lagrange: [0.278614]
+		val. restrições: [-0.00828871]
+
+  iter: 55 		fitness: 0.2059	volume:	0.486 
+   rho: 1.00 	 mult. lagrange: [0.271053]
+		val. restrições: [-0.00756093]
+
+  iter: 56 		fitness: 0.2041	volume:	0.487 
+   rho: 1.00 	 mult. lagrange: [0.264425]
+		val. restrições: [-0.00662813]
+
+  iter: 57 		fitness: 0.2024	volume:	0.487 
+   rho: 1.00 	 mult. lagrange: [0.258616]
+		val. restrições: [-0.0058086]
+
+  iter: 58 		fitness: 0.2006	volume:	0.488 
+   rho: 1.00 	 mult. lagrange: [0.254611]
+		val. restrições: [-0.00400472]
+
+  iter: 59 		fitness: 0.1990	volume:	0.489 
+   rho: 1.00 	 mult. lagrange: [0.251987]
+		val. restrições: [-0.00262453]
+
+  iter: 60 		fitness: 0.1976	volume:	0.489 
+   rho: 1.00 	 mult. lagrange: [0.249958]
+		val. restrições: [-0.00202862]
+
+  iter: 61 		fitness: 0.1965	volume:	0.489 
+   rho: 1.00 	 mult. lagrange: [0.247774]
+		val. restrições: [-0.00218406]
+
+  iter: 62 		fitness: 0.1958	volume:	0.489 
+   rho: 1.00 	 mult. lagrange: [0.245489]
+		val. restrições: [-0.0022857]
+
+  iter: 63 		fitness: 0.1949	volume:	0.489 
+   rho: 1.00 	 mult. lagrange: [0.243161]
+		val. restrições: [-0.00232708]
+
+  iter: 64 		fitness: 0.1940	volume:	0.489 
+   rho: 1.00 	 mult. lagrange: [0.241546]
+		val. restrições: [-0.00161495]
+
+  iter: 65 		fitness: 0.1932	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.241457]
+		val. restrições: [-8.98866e-5]
+
+  iter: 66 		fitness: 0.1929	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.241765]
+		val. restrições: [0.000308753]
+
+  iter: 67 		fitness: 0.1930	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.241084]
+		val. restrições: [-0.000681056]
+
+  iter: 68 		fitness: 0.1930	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.240403]
+		val. restrições: [-0.000681056]
+
+  iter: 69 		fitness: 0.1930	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.239722]
+		val. restrições: [-0.000681056]
+
+  iter: 70 		fitness: 0.1930	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.239041]
+		val. restrições: [-0.000681056]
+
+  iter: 71 		fitness: 0.1930	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.23836]
+		val. restrições: [-0.000681056]
+
+  iter: 72 		fitness: 0.1930	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.237679]
+		val. restrições: [-0.000681056]
+
+  iter: 73 		fitness: 0.1930	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.236998]
+		val. restrições: [-0.000681056]
+
+  iter: 74 		fitness: 0.1930	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.236317]
+		val. restrições: [-0.000681056]
+
+  iter: 75 		fitness: 0.1930	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.235636]
+		val. restrições: [-0.000681056]
+
+  iter: 76 		fitness: 0.1930	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.234955]
+		val. restrições: [-0.000681055]
+
+  iter: 77 		fitness: 0.1930	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.234274]
+		val. restrições: [-0.000681054]
+
+  iter: 78 		fitness: 0.1929	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.234066]
+		val. restrições: [-0.000207887]
+
+  iter: 79 		fitness: 0.1929	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.233858]
+		val. restrições: [-0.000207887]
+
+  iter: 80 		fitness: 0.1929	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.23365]
+		val. restrições: [-0.000207887]
+
+  iter: 81 		fitness: 0.1929	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.233442]
+		val. restrições: [-0.000207886]
+
+  iter: 82 		fitness: 0.1929	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.233234]
+		val. restrições: [-0.000207886]
+
+  iter: 83 		fitness: 0.1929	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.233026]
+		val. restrições: [-0.000207886]
+
+  iter: 84 		fitness: 0.1929	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.232819]
+		val. restrições: [-0.000207886]
+
+  iter: 85 		fitness: 0.1929	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.232611]
+		val. restrições: [-0.000207886]
+
+  iter: 86 		fitness: 0.1929	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.232403]
+		val. restrições: [-0.000207886]
+
+  iter: 87 		fitness: 0.1929	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.232195]
+		val. restrições: [-0.000207885]
+
+  iter: 88 		fitness: 0.1929	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.231987]
+		val. restrições: [-0.000207885]
+
+  iter: 89 		fitness: 0.1929	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.231779]
+		val. restrições: [-0.000207885]
+
+  iter: 90 		fitness: 0.1929	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.231571]
+		val. restrições: [-0.000207885]
+
+  iter: 91 		fitness: 0.1929	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.231363]
+		val. restrições: [-0.000207884]
+
+  iter: 92 		fitness: 0.1929	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.231155]
+		val. restrições: [-0.000207884]
+
+  iter: 93 		fitness: 0.1929	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.230948]
+		val. restrições: [-0.000207883]
+
+  iter: 94 		fitness: 0.1929	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.23074]
+		val. restrições: [-0.000207883]
+
+  iter: 95 		fitness: 0.1929	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.230532]
+		val. restrições: [-0.000207882]
+
+  iter: 96 		fitness: 0.1929	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.230324]
+		val. restrições: [-0.000207881]
+
+  iter: 97 		fitness: 0.1928	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.230293]
+		val. restrições: [-3.04874e-5]
+
+  iter: 98 		fitness: 0.1928	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.230263]
+		val. restrições: [-3.0487e-5]
+
+  iter: 99 		fitness: 0.1928	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.230232]
+		val. restrições: [-3.04863e-5]
+
+  iter: 100 		fitness: 0.1928	volume:	0.490 
+   rho: 1.00 	 mult. lagrange: [0.230202]
+		val. restrições: [-3.0486e-5]
+	FIM! 106.34 minutos

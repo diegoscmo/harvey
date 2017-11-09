@@ -1,42 +1,41 @@
-# Gera uma variável com as coordenadas do centro de cada elemento
-# Depois converte isso para a matriz H
-function Calc_H(coord,conect,nelems,rmin)
+#
+#   Identifica se há filtro em x e aplica
+#
+function Aplica_Filtro(x, filt)
 
-    # Inicializa
-    centros = zeros(Float64,nelems,2)
-    sumH    = zeros(Float64,nelems)
-    H       = zeros(Float64,nelems,nelems)
-
-    # Acumula as coordenadas referentes aos nós de cada elemento
-    for j=1:nelems
-        nos = conect[j,:]
-        for k = 1:4
-            centros[j,1] += coord[nos[k],1]
-            centros[j,2] += coord[nos[k],2]
-        end # for k
-
-    end # for j
-
-    # Faz a média, definindo as posições centrais
-    centros = centros/4.0
-
-    # Calcula Hj de k
-    for j=1:nelems
-        for k=1:nelems
-            dkj = sqrt((centros[k,1]-centros[j,1])^2.0+(centros[k,2]-centros[j,2])^2.0)
-            if dkj <= rmin
-                H[j,k]= rmin - dkj
-            end
-        end
+    if filt.filtro == "Dens"
+        x = Filtro_Dens(x, filt)
+    elseif filt.filtro == "Off"
+        x = copy(x)
+    else
+      error("Erro na declaracao do Filtro")
     end
 
-    for j=1:nelems
-        sumH[j] = sum(H[:,j])
+    return x
+end
+#
+#   Identifica se a derivada precisa de correção e a executa
+#
+function Derivada_Filtro(dLf, filt)
+
+    # Declara a saída
+    dLo = zeros(Float64,size(dLf,1))
+
+    if filt.filtro == "Dens"
+        dLo = dL_Dens(dLf, filt)
+    elseif filt.filtro == "Off"
+        dLo = copy(dLf)
+    else
+      error("Erro na declaracao do Filtro")
     end
 
-    return H,sumH
+    return dLo
 end
 
+
+#
+# Identifica os vizinhos de cada elemento e a distancia entre eles
+#
 function Proc_Vizinhos(nelems,coord,conect,raiof)
 
     # Inicializa a matriz de vizinhos, distancias e quantidade de vizinhos
@@ -85,28 +84,82 @@ function Proc_Vizinhos(nelems,coord,conect,raiof)
     return vizi,nviz,dviz
 end
 
-# Aplica filtro de densidades
-function Filtra_Dens(xo)
+#
+# Aplica filtro de densidades, pág 65
+#
+function Filtro_Dens(xi,filt)
 
-    # Inicializa vetor
-    xf = zeros(Float64,nelems)
+    # Inicializa vetor de saída
+    nelems = size(xi,1)
+    xo = zeros(Float64,nelems)
+    nviz  = filt.nviz
+    vizi  = filt.vizi
+    dviz  = filt.dviz
+    raiof = filt.raiof
 
-    # Varre os elementos filtrando-os
-    for k=1:nelems
-        xf[k] = sum(H[k,:].*xo)/sumH[k]
+    # Varre os elementos
+    for k = 1:nelems
+
+        # Zera acumuladores
+        dividen = 0.0
+        divisor = 0.0
+
+        # Acumula somatórios para cada vizinho de k
+        for j = 1:nviz[k]
+            #pesoH    = raiof - dviz[k,j]
+            pesoH    = 1.0 - dviz[k,j]/raiof
+            dividen += pesoH*xi[vizi[k,j]]
+            divisor += pesoH
+        end
+
+        # Filtra elemento
+        xo[k] = dividen/divisor
+
     end
 
-    return xf
+    return xo
 end
-
-# Corrige derivada devido ao filtro de densidades (derivada)
-function Corrige_dL(x, dL)
+#
+# Corrige derivada devido ao filtro de densidades (cadeia)
+#
+function dL_Dens(dLd, filt)
 
     # Inicializa o vetor das derivadas corrigidas
-    dLc = zeros(Float64,nelems)
+    dLo = zeros(Float64,size(dLd,1))
+    nviz  = filt.nviz
+    vizi  = filt.vizi
+    dviz  = filt.dviz
+    raiof = filt.raiof
 
-    #FIXME? Jeito mais fácil de fazer? Aqui no filtro eu multiplico a matriz inteira,
-    # talvez vale a pena listar os vizinhos...
+    # Varre m elementos
+    for m=1:size(dLd,1)
 
-    return dLc
+      # Define vizinhos de m
+      vizm = vizi[m,1:nviz[m]]
+
+      # Varre os vizinhos de m
+      for k in vizm
+
+        # Posição de m na tabela de vizinhanca
+        pos = findfirst(vizi[k,1:nviz[k]],m)
+
+        # Calcula o peso (H) entre m e k
+        #Hmk = raiof - dviz[k,pos]
+        Hmk = 1.0 - dviz[k,pos]/raiof
+
+        # Loop para denominador da filtragem, Hjk
+        soma = 0.0
+        for j=1:nviz[k]
+          #soma += raiof - dviz[k,j]
+          soma += 1.0 - dviz[k,j]/raiof
+        end #j
+
+        # Acumula a correção de derivada
+        dLo[m] += dLd[k]*(Hmk/soma)
+
+      end #k
+
+   end #m
+
+    return dLo
 end
