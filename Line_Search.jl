@@ -1,6 +1,6 @@
 function Line_Search(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Float64,
    dir::Array{Float64,1}, xl::Array{Float64,1}, xu::Array{Float64,1}, tol_int::Float64, count::Int64,
-    fem,valor_zero)
+    fem,filt,valor_zero)
 
     # Define um valor minimo de passo
     const minimo = 1E-12
@@ -30,7 +30,8 @@ function Line_Search(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Float
     end
 
     # Calcula o valor do custo no ponto atual
-    Ll = F_Lagrangiana(x, mult_res, rho,fem,valor_zero)
+    xf = Aplica_Filtro(x, filt)
+    Ll = F_Lagrangiana(xf, mult_res, rho, fem, valor_zero)
     count += 1
 
     # Bracketing
@@ -39,7 +40,8 @@ function Line_Search(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Float
         xn = x + aa*dir
 
         # Calcula funcao lagrangiana nesta nova posicao
-        La = F_Lagrangiana(xn, mult_res, rho,fem,valor_zero)
+        xf = Aplica_Filtro(xn, filt)
+        La = F_Lagrangiana(xf, mult_res, rho, fem, valor_zero)
         count += 1
 
         # Se nao minimizar, diminui o passo delta
@@ -65,7 +67,8 @@ function Line_Search(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Float
         end
 
         # Calcula funcao lagrangiana nesta nova posicao
-        Lu = F_Lagrangiana(xn, mult_res, rho,fem,valor_zero)
+        xf = Aplica_Filtro(xn, filt)
+        Lu = F_Lagrangiana(xf, mult_res, rho, fem, valor_zero)
         count += 1
 
         # Aproxima o search pelo brackeing inferior
@@ -85,7 +88,7 @@ function Line_Search(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Float
             break
         end
 
-        delta = delta/10.
+        delta = delta/10.0
         aa = al
         La = Ll
 
@@ -98,7 +101,8 @@ function Line_Search(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Float
                 return alpha,count
             end
 
-            Lu = F_Lagrangiana(xn, mult_res, rho,fem,valor_zero)
+            xf = Aplica_Filtro(xn, filt)
+            Lu = F_Lagrangiana(xf, mult_res, rho, fem, valor_zero)
             count += 1
             if La>Lu
                 al = aa
@@ -111,7 +115,7 @@ function Line_Search(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Float
         end
     end
 
-    alpha = (au+al)/2.
+    alpha = (au+al)/2.0
 
     return alpha,count
 

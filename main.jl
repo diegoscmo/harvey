@@ -1,7 +1,7 @@
 ################################################################################
 # Lagrangiano Aumentado // Otimização Topológica
 ################################################################################
-# cd(ENV["HARVEY"]);include("Main.jl") >> diretório da variável de sistema
+# cd(ENV["HARVEY"]);include("Main.jl");main() >> diretório da variável de sistema
 
 # Limpa tudo
 workspace();
@@ -17,18 +17,19 @@ include("Steepest.jl")          # Método de Descida
 include("Line_Search.jl")       # Método de busca em linha
 
 # Carrega cálculo das derivadas
-include("Fobj_Estatico.jl")         # Fobj e Sensibilidades
+include("Fobj_Dinamico_Est.jl")         # Fobj e Sensibilidades
+include("Dif_Fin.jl")         # Fobj e Sensibilidades
 
 # Etc
 include("Filtros.jl")               # Filtros de densidades e sensibilidades
 include("Saida.jl")                 # Impressão das saídas em arquivo e console
 
 type finitos
-    KG;CG;MG;F;U;
-    K0;M0;simp;
-    nelems;conect;NX;NY
-    ID;nforcas;nos_forcas;nr_gl_livres;
-    w
+    KG; CG; MG; KD; F; UE; UD;
+    K0; M0; simp;
+    nelems; conect; NX; NY
+    ID; nforcas; nos_forcas; nr_gl_livres;
+    w; alfa; beta
 end
 
 type filtros
@@ -45,30 +46,31 @@ function main()
 
     # Parâmetros do Lagrangiano Aumentado
     max_ext     = 100       # Máximo de iteracoes externas
-    max_int     = 50        # Máximo de iterações internas
-    tol_ext     = 1E-4      # Tolerância do laço externo
-    tol_int     = 1E-4      # Tolerância do laço interno
-    rho_max     = 1.0      # Valor maximo de rho
+    max_int     = 200       # Máximo de iterações internas
+    tol_ext     = 1E-5      # Tolerância do laço externo
+    tol_int     = 1E-5      # Tolerância do laço interno
+    rho_ini     = 0.2
+    rho_max     = 5.0       # Valor maximo de rho
     mult_max    = 10.0      # Valor maximo dos multiplicadores
 
     # Parâmetros da topológica
     dens_ini    = 0.49      # Volume/Pseudo-densidades iniciais
     simp        = 3.0       # Parametro p do SIMP
-    raiof       = 0.04      # Tamanho do filtro [m]
-    filtro      = "Dens"     # Filtros: (Off ou Dens)
+    raiof       = 0.031     # Tamanho do filtro [m]
+    filtro      = "Dens"    # Filtros: (Off ou Dens)
 
     # Parâmetros do problema Harmônico
-    f    = 10.0      # Frequencia
+    f    = 180.0      # Frequencia
     alfa = 0.0      # Amortecimento proporcional de Rayleigh
     beta = 1E-8
+
+    # Malha:
+    NX = 60   #80        # Nr. de elementos em X
+    NY = 30   #40        # Nr. de elementos em Y
 
     # Definição geométrica do problema (retângulo):
     LX = 1.0       # Comprimento em X
     LY = 0.5       # Comprimento em Y
-
-    # Malha:
-    NX = 40   #120        # Nr. de elementos em X
-    NY = 20   #60        # Nr. de elementos em Y
 
     # Material:
     young   = 210E9     # Módulo de Young
@@ -114,18 +116,22 @@ function main()
     # Monta matrizes de rigidez e massa Globais, aqui é aplicado o SIMP e  CORREÇÔES OLHOF&DU!
     KG,MG,F = Global(nelems, conect, ID, K0, M0, x, simp, nforcas, nos_forcas, nr_gl_livres)
 
+    # Monta CG e KD (Harmônica)
+    CG = alfa*MG + beta*KG
+    KD = KG + w*im*CG - w^2.0*MG
+
     # Resolve o sistema pela primeira vez
-    U = vec(lufact(KG)\F);
-    CG = 0.0
-    fem = finitos(KG, CG, MG, F, U, K0, M0, simp, nelems, conect,
-                    NX, NY, ID, nforcas, nos_forcas, nr_gl_livres, w)
+    UE = vec(lufact(KG)\F);
+    UD = vec(lufact(KD)\F);
+    fem = finitos(KG, CG, MG, KD, F, UE, UD, K0, M0, simp, nelems, conect, NX, NY,
+                            ID, nforcas, nos_forcas, nr_gl_livres, w, alfa, beta)
 
     # Obtem os valores de f e g em x0 para o calculo de c0
     valor_fun, valor_res, fem = F_Obj(x, fem, 0.0)
 
     # Salva o valor da primeira função para
     valor_zero = copy(valor_fun)
-    valor_fun  = 1.0
+    #valor_fun  = 1.0
 
     # Inicializa multiplicadores de Lagrange (u)
     numres   = size(valor_res, 1)
@@ -133,43 +139,45 @@ function main()
 
     # Define fator de penalização inicial (c)
     rho = max.(1E-6,min(rho_max,(2.0*abs(valor_fun)/norm(max.(valor_res,0.))^2.)))
+    rho = rho_ini
 
     # E calcula o criterio de atualizacao do c
-    crho_ant = max.(0.,norm(norm(max.(valor_res, -mult_res/rho))))
+    crho_ant = max.(0.,norm(max.(valor_res, -mult_res/rho)))
 
     # Inicializa o contador de avaliacoes da F_Obj
     count = 1
+    n_int = 0
     viewcount = 0.0
 
     # Prepara o plot e primeira saída
     Inicializa_Malha_Gmsh(fname, nnos, nelems, conect, coord, 2)
     Adiciona_Vista_Escalar_Gmsh(fname, "x", nelems, x, 0.0)
     Imprime(0, x, rho, mult_res, valor_fun, valor_res, dts, nelems,
-            max_ext, max_int, tol_ext, tol_int, filtro, raiof, simp, f)
+            max_ext, max_int, tol_ext, tol_int, filtro, raiof, simp, f, n_int,count)
 
     # Inicia o laço externo do lagrangiano aumentado
     for i_ext=1:max_ext
 
         # Soluciona o problema interno (e salva a derivada)
-        x,dL,count,fem = Steepest(x, valor_res, mult_res, rho, xl, xu,
+        x, dL, count, fem, n_int = Steepest(x, valor_res, mult_res, rho, xl, xu,
                                 max_int, tol_int, count, fem, filt, valor_zero)
 
         # Verifica novos valores da função e restrições
-        valor_fun,valor_res = F_Obj(x, fem, valor_zero)
+        valor_fun, valor_res, fem = F_Obj(x, fem, valor_zero)
 
         # Atualiza o valor o multiplicador das restricoes (u)
         mult_res = min.(mult_max, max.(rho*valor_res + mult_res, 0.0))
 
         # Atualiza o multiplicador de penalizacao (c)
-        crho_nov = max.(0., norm(norm(max.(valor_res, -mult_res/rho))))
+        crho_nov = max.(0., norm(max.(valor_res, -mult_res/rho)))
         if crho_nov >= .9*crho_ant
             rho = min.(1.1*rho, rho_max)
         end # if
 
         # Imprime resultado atual e plota saida para o gmsh
-        Adiciona_Vista_Escalar_Gmsh(fname,"xf",nelems,x,Float64(i_ext))
+        Adiciona_Vista_Escalar_Gmsh(fname, "xf", nelems, x, Float64(i_ext))
         Imprime(i_ext, x, rho, mult_res, valor_fun, valor_res, dts, nelems,
-                max_ext, max_int, tol_ext, tol_int, filtro, raiof, simp, f)
+                max_ext, max_int, tol_ext, tol_int, filtro, raiof, simp, f,n_int,count)
 
         # Verifica os criterios:
         if  norm(dL)                   <= tol_ext &&  # Condicao de gradiente
@@ -182,5 +190,5 @@ function main()
 
     # Display Final
     Imprime(-1, x, rho, mult_res, valor_fun, valor_res, dts, nelems,
-            max_ext, max_int, tol_ext, tol_int, filtro, raiof, simp, f)
+            max_ext, max_int, tol_ext, tol_int, filtro, raiof, simp, f,n_int,count)
 end

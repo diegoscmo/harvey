@@ -1,0 +1,370 @@
+
+  LagAug:: 2017-11-17-11-26-43
+
+  Nelems:: 1800 // Iter:: 100/200 // Tol:: 1.0e-5/1.0e-6
+
+  Filtro:: Dens // raiof:: 0.031 // pSIMP 3.0 // freq: 100.0
+
+  iter: 0 	origin. fitness: 1.773916e-01	volume:	0.490 
+  rho: 0.2000 	mults. lagrange: [0.0]
+		val. restrições: [-3.48305e-15]
+  		passos internos: 200		evals: 2978
+
+  iter: 1 	origin. fitness: 7.330445e-02	volume:	0.538 
+  rho: 0.2200 	mults. lagrange: [0.0189918]
+		val. restrições: [0.094959]
+  		passos internos: 200		evals: 5704
+
+  iter: 2 	origin. fitness: 7.238054e-02	volume:	0.539 
+  rho: 0.2420 	mults. lagrange: [0.0403197]
+		val. restrições: [0.096945]
+  		passos internos: 200		evals: 8369
+
+  iter: 3 	origin. fitness: 6.888153e-02	volume:	0.543 
+  rho: 0.2662 	mults. lagrange: [0.0655205]
+		val. restrições: [0.104136]
+  		passos internos: 200		evals: 11129
+
+  iter: 4 	origin. fitness: 6.228760e-02	volume:	0.550 
+  rho: 0.2928 	mults. lagrange: [0.0965854]
+		val. restrições: [0.116697]
+  		passos internos: 200		evals: 11769
+
+  iter: 5 	origin. fitness: 4.914915e-02	volume:	0.493 
+  rho: 0.3221 	mults. lagrange: [0.0980237]
+		val. restrições: [0.00491201]
+  		passos internos: 200		evals: 12452
+
+  iter: 6 	origin. fitness: 4.198295e-02	volume:	0.489 
+  rho: 0.3543 	mults. lagrange: [0.0974833]
+		val. restrições: [-0.00167782]
+  		passos internos: 200		evals: 13088
+
+  iter: 7 	origin. fitness: 4.034941e-02	volume:	0.482 
+  rho: 0.3897 	mults. lagrange: [0.091942]
+		val. restrições: [-0.0156395]
+  		passos internos: 200		evals: 13791
+
+  iter: 8 	origin. fitness: 3.760468e-02	volume:	0.481 
+  rho: 0.4287 	mults. lagrange: [0.0848568]
+		val. restrições: [-0.0181792]
+  		passos internos: 200		evals: 14699
+
+  iter: 9 	origin. fitness: 3.524005e-02	volume:	0.474 
+  rho: 0.4716 	mults. lagrange: [0.0714945]
+		val. restrições: [-0.031168]
+  		passos internos: 200		evals: 15991
+
+  iter: 10 	origin. fitness: 3.104627e-02	volume:	0.486 
+  rho: 0.5187 	mults. lagrange: [0.0680292]
+		val. restrições: [-0.00734821]
+  		passos internos: 200		evals: 18647
+
+  iter: 11 	origin. fitness: 3.121002e-02	volume:	0.484 
+  rho: 0.5706 	mults. lagrange: [0.0622599]
+		val. restrições: [-0.0111216]
+  		passos internos: 200		evals: 19989
+
+  iter: 12 	origin. fitness: 3.044194e-02	volume:	0.479 
+  rho: 0.6277 	mults. lagrange: [0.0495817]
+		val. restrições: [-0.0222181]
+  		passos internos: 200		evals: 22352
+
+  iter: 13 	origin. fitness: 2.936863e-02	volume:	0.490 
+  rho: 0.6905 	mults. lagrange: [0.0490975]
+		val. restrições: [-0.000771389]
+  		passos internos: 200		evals: 24630
+
+  iter: 14 	origin. fitness: 2.853519e-02	volume:	0.481 
+  rho: 0.7595 	mults. lagrange: [0.0367004]
+		val. restrições: [-0.0179551]
+  		passos internos: 200		evals: 27041
+
+  iter: 15 	origin. fitness: 2.778296e-02	volume:	0.492 
+  rho: 0.8354 	mults. lagrange: [0.0390077]
+		val. restrições: [0.00303802]
+  		passos internos: 200		evals: 28428
+
+  iter: 16 	origin. fitness: 2.739134e-02	volume:	0.486 
+  rho: 0.9190 	mults. lagrange: [0.0331256]
+		val. restrições: [-0.00704067]
+  		passos internos: 200		evals: 30873
+
+  iter: 17 	origin. fitness: 2.692324e-02	volume:	0.494 
+  rho: 1.0109 	mults. lagrange: [0.0400265]
+		val. restrições: [0.00750919]
+  		passos internos: 200		evals: 32782
+
+  iter: 18 	origin. fitness: 2.724288e-02	volume:	0.487 
+  rho: 1.1120 	mults. lagrange: [0.033896]
+		val. restrições: [-0.00606441]
+  		passos internos: 200		evals: 35065
+
+  iter: 19 	origin. fitness: 2.681023e-02	volume:	0.494 
+  rho: 1.2232 	mults. lagrange: [0.0421623]
+		val. restrições: [0.00743376]
+  		passos internos: 200		evals: 36904
+
+  iter: 20 	origin. fitness: 2.718261e-02	volume:	0.486 
+  rho: 1.3455 	mults. lagrange: [0.0335936]
+		val. restrições: [-0.00700525]
+  		passos internos: 200		evals: 38900
+
+  iter: 21 	origin. fitness: 2.670561e-02	volume:	0.494 
+  rho: 1.4800 	mults. lagrange: [0.0444729]
+		val. restrições: [0.00808571]
+  		passos internos: 200		evals: 40624
+
+  iter: 22 	origin. fitness: 2.713081e-02	volume:	0.486 
+  rho: 1.6281 	mults. lagrange: [0.0328194]
+		val. restrições: [-0.0078737]
+  		passos internos: 200		evals: 42042
+
+  iter: 23 	origin. fitness: 2.660583e-02	volume:	0.495 
+  rho: 1.7909 	mults. lagrange: [0.0481159]
+		val. restrições: [0.00939553]
+  		passos internos: 200		evals: 43366
+
+  iter: 24 	origin. fitness: 2.716525e-02	volume:	0.485 
+  rho: 1.9699 	mults. lagrange: [0.0293151]
+		val. restrições: [-0.0104982]
+  		passos internos: 200		evals: 44009
+
+  iter: 25 	origin. fitness: 2.653774e-02	volume:	0.496 
+  rho: 2.1669 	mults. lagrange: [0.0531425]
+		val. restrições: [0.0120954]
+  		passos internos: 200		evals: 44612
+
+  iter: 26 	origin. fitness: 2.704520e-02	volume:	0.487 
+  rho: 2.3836 	mults. lagrange: [0.038427]
+		val. restrições: [-0.0067909]
+  		passos internos: 200		evals: 45212
+
+  iter: 27 	origin. fitness: 2.674379e-02	volume:	0.490 
+  rho: 2.6220 	mults. lagrange: [0.0406968]
+		val. restrições: [0.000952234]
+  		passos internos: 200		evals: 45827
+
+  iter: 28 	origin. fitness: 2.676130e-02	volume:	0.490 
+  rho: 2.8842 	mults. lagrange: [0.038406]
+		val. restrições: [-0.000873679]
+  		passos internos: 200		evals: 49158
+
+  iter: 29 	origin. fitness: 2.537590e-02	volume:	0.504 
+  rho: 3.1726 	mults. lagrange: [0.115851]
+		val. restrições: [0.0268515]
+  		passos internos: 200		evals: 51624
+
+  iter: 30 	origin. fitness: 3.200495e-02	volume:	0.453 
+  rho: 3.4899 	mults. lagrange: [0.0]
+		val. restrições: [-0.0734672]
+  		passos internos: 200		evals: 52224
+
+  iter: 31 	origin. fitness: 2.774504e-02	volume:	0.480 
+  rho: 3.8389 	mults. lagrange: [0.0]
+		val. restrições: [-0.0188725]
+  		passos internos: 200		evals: 52824
+
+  iter: 32 	origin. fitness: 2.665117e-02	volume:	0.491 
+  rho: 4.2228 	mults. lagrange: [0.00526261]
+		val. restrições: [0.00137088]
+  		passos internos: 200		evals: 53424
+
+  iter: 33 	origin. fitness: 2.665117e-02	volume:	0.491 
+  rho: 4.6450 	mults. lagrange: [0.0110515]
+		val. restrições: [0.00137088]
+  		passos internos: 200		evals: 54024
+
+  iter: 34 	origin. fitness: 2.661318e-02	volume:	0.491 
+  rho: 5.1095 	mults. lagrange: [0.0202406]
+		val. restrições: [0.00197826]
+  		passos internos: 200		evals: 54624
+
+  iter: 35 	origin. fitness: 2.640971e-02	volume:	0.492 
+  rho: 5.6205 	mults. lagrange: [0.0422341]
+		val. restrições: [0.0043044]
+  		passos internos: 200		evals: 55224
+
+  iter: 36 	origin. fitness: 2.646992e-02	volume:	0.489 
+  rho: 6.1825 	mults. lagrange: [0.0362741]
+		val. restrições: [-0.0010604]
+  		passos internos: 200		evals: 55825
+
+  iter: 37 	origin. fitness: 2.595855e-02	volume:	0.495 
+  rho: 6.8008 	mults. lagrange: [0.0956219]
+		val. restrições: [0.00959927]
+  		passos internos: 200		evals: 57321
+
+  iter: 38 	origin. fitness: 3.110497e-02	volume:	0.452 
+  rho: 7.4809 	mults. lagrange: [0.0]
+		val. restrições: [-0.073641]
+  		passos internos: 200		evals: 57921
+
+  iter: 39 	origin. fitness: 2.818418e-02	volume:	0.473 
+  rho: 8.2290 	mults. lagrange: [0.0]
+		val. restrições: [-0.0340958]
+  		passos internos: 200		evals: 58521
+
+  iter: 40 	origin. fitness: 2.711017e-02	volume:	0.483 
+  rho: 9.0519 	mults. lagrange: [0.0]
+		val. restrições: [-0.0140177]
+  		passos internos: 200		evals: 59122
+
+  iter: 41 	origin. fitness: 2.625222e-02	volume:	0.495 
+  rho: 9.9570 	mults. lagrange: [0.0867701]
+		val. restrições: [0.0095859]
+  		passos internos: 200		evals: 59722
+
+  iter: 42 	origin. fitness: 2.625222e-02	volume:	0.495 
+  rho: 10.0000 	mults. lagrange: [0.182217]
+		val. restrições: [0.00958588]
+  		passos internos: 200		evals: 60322
+
+  iter: 43 	origin. fitness: 2.636217e-02	volume:	0.493 
+  rho: 10.0000 	mults. lagrange: [0.250409]
+		val. restrições: [0.00681924]
+  		passos internos: 200		evals: 60922
+
+  iter: 44 	origin. fitness: 2.699401e-02	volume:	0.487 
+  rho: 10.0000 	mults. lagrange: [0.183468]
+		val. restrições: [-0.00669412]
+  		passos internos: 200		evals: 61522
+
+  iter: 45 	origin. fitness: 2.730694e-02	volume:	0.481 
+  rho: 10.0000 	mults. lagrange: [0.0027139]
+		val. restrições: [-0.0180754]
+  		passos internos: 200		evals: 62122
+
+  iter: 46 	origin. fitness: 2.673715e-02	volume:	0.485 
+  rho: 10.0000 	mults. lagrange: [0.0]
+		val. restrições: [-0.00908003]
+  		passos internos: 200		evals: 62722
+
+  iter: 47 	origin. fitness: 2.649264e-02	volume:	0.488 
+  rho: 10.0000 	mults. lagrange: [0.0]
+		val. restrições: [-0.00409396]
+  		passos internos: 200		evals: 63322
+
+  iter: 48 	origin. fitness: 2.624229e-02	volume:	0.492 
+  rho: 10.0000 	mults. lagrange: [0.0402972]
+		val. restrições: [0.00402972]
+  		passos internos: 200		evals: 63922
+
+  iter: 49 	origin. fitness: 2.624229e-02	volume:	0.492 
+  rho: 10.0000 	mults. lagrange: [0.0805944]
+		val. restrições: [0.00402972]
+  		passos internos: 200		evals: 64522
+
+  iter: 50 	origin. fitness: 2.624697e-02	volume:	0.492 
+  rho: 10.0000 	mults. lagrange: [0.11886]
+		val. restrições: [0.00382658]
+  		passos internos: 200		evals: 65122
+
+  iter: 51 	origin. fitness: 2.642579e-02	volume:	0.489 
+  rho: 10.0000 	mults. lagrange: [0.107171]
+		val. restrições: [-0.00116896]
+  		passos internos: 200		evals: 65722
+
+  iter: 52 	origin. fitness: 2.647521e-02	volume:	0.488 
+  rho: 10.0000 	mults. lagrange: [0.0728216]
+		val. restrições: [-0.00343489]
+  		passos internos: 200		evals: 66322
+
+  iter: 53 	origin. fitness: 2.639502e-02	volume:	0.489 
+  rho: 10.0000 	mults. lagrange: [0.0492825]
+		val. restrições: [-0.00235391]
+  		passos internos: 200		evals: 66922
+
+  iter: 54 	origin. fitness: 2.631908e-02	volume:	0.490 
+  rho: 10.0000 	mults. lagrange: [0.0398207]
+		val. restrições: [-0.000946177]
+  		passos internos: 200		evals: 67540
+
+  iter: 55 	origin. fitness: 2.602403e-02	volume:	0.493 
+  rho: 10.0000 	mults. lagrange: [0.105521]
+		val. restrições: [0.00657003]
+  		passos internos: 200		evals: 69223
+
+  iter: 56 	origin. fitness: 3.526872e-02	volume:	0.424 
+  rho: 10.0000 	mults. lagrange: [0.0]
+		val. restrições: [-0.129487]
+  		passos internos: 200		evals: 69823
+
+  iter: 57 	origin. fitness: 3.013259e-02	volume:	0.454 
+  rho: 10.0000 	mults. lagrange: [0.0]
+		val. restrições: [-0.0698102]
+  		passos internos: 200		evals: 70423
+
+  iter: 58 	origin. fitness: 2.806710e-02	volume:	0.473 
+  rho: 10.0000 	mults. lagrange: [0.0]
+		val. restrições: [-0.0336738]
+  		passos internos: 200		evals: 71025
+
+  iter: 59 	origin. fitness: 2.669860e-02	volume:	0.491 
+  rho: 10.0000 	mults. lagrange: [0.0212937]
+		val. restrições: [0.00212937]
+  		passos internos: 200		evals: 71625
+
+  iter: 60 	origin. fitness: 2.669860e-02	volume:	0.491 
+  rho: 10.0000 	mults. lagrange: [0.0425873]
+		val. restrições: [0.00212936]
+  		passos internos: 200		evals: 72225
+
+  iter: 61 	origin. fitness: 2.670135e-02	volume:	0.491 
+  rho: 10.0000 	mults. lagrange: [0.0591669]
+		val. restrições: [0.00165796]
+  		passos internos: 200		evals: 72825
+
+  iter: 62 	origin. fitness: 2.678663e-02	volume:	0.487 
+  rho: 10.0000 	mults. lagrange: [0.00499668]
+		val. restrições: [-0.00541702]
+  		passos internos: 200		evals: 73432
+
+  iter: 63 	origin. fitness: 2.641020e-02	volume:	0.495 
+  rho: 10.0000 	mults. lagrange: [0.101154]
+		val. restrições: [0.00961573]
+  		passos internos: 200		evals: 74032
+
+  iter: 64 	origin. fitness: 2.641020e-02	volume:	0.495 
+  rho: 10.0000 	mults. lagrange: [0.197311]
+		val. restrições: [0.00961573]
+  		passos internos: 200		evals: 74632
+
+  iter: 65 	origin. fitness: 2.641686e-02	volume:	0.495 
+  rho: 10.0000 	mults. lagrange: [0.291735]
+		val. restrições: [0.00944238]
+  		passos internos: 200		evals: 75232
+
+  iter: 66 	origin. fitness: 2.674003e-02	volume:	0.491 
+  rho: 10.0000 	mults. lagrange: [0.317648]
+		val. restrições: [0.00259133]
+  		passos internos: 200		evals: 75832
+
+  iter: 67 	origin. fitness: 2.892130e-02	volume:	0.471 
+  rho: 10.0000 	mults. lagrange: [0.0]
+		val. restrições: [-0.0373081]
+  		passos internos: 200		evals: 76432
+
+  iter: 68 	origin. fitness: 2.708073e-02	volume:	0.483 
+  rho: 10.0000 	mults. lagrange: [0.0]
+		val. restrições: [-0.0135701]
+  		passos internos: 200		evals: 77032
+
+  iter: 69 	origin. fitness: 2.675763e-02	volume:	0.486 
+  rho: 10.0000 	mults. lagrange: [0.0]
+		val. restrições: [-0.00755439]
+  		passos internos: 200		evals: 77632
+
+  iter: 70 	origin. fitness: 2.653504e-02	volume:	0.489 
+  rho: 10.0000 	mults. lagrange: [0.0]
+		val. restrições: [-0.0014106]
+  		passos internos: 200		evals: 78286
+
+  iter: 71 	origin. fitness: 2.564109e-02	volume:	0.514 
+  rho: 10.0000 	mults. lagrange: [0.464516]
+		val. restrições: [0.0464516]
+  		passos internos: 200		evals: 78886
+
+  iter: 72 	origin. fitness: 2.564109e-02	volume:	0.514 
+  rho: 10.0000 	mults. lagrange: [0.929032]
+		val. restrições: [0.0464516]

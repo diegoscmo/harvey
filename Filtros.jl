@@ -1,30 +1,30 @@
 #
 #   Identifica se há filtro em x e aplica
 #
-function Aplica_Filtro(x, filt)
+function Aplica_Filtro(xi, filt)
 
     if filt.filtro == "Dens"
-        x = Filtro_Dens(x, filt)
+        xo = Filtro_Dens(xi, filt)
     elseif filt.filtro == "Off"
-        x = copy(x)
+        xo = copy(xi)
     else
       error("Erro na declaracao do Filtro")
     end
 
-    return x
+    return xo
 end
 #
 #   Identifica se a derivada precisa de correção e a executa
 #
-function Derivada_Filtro(dLf, filt)
+function Derivada_Filtro(dLi, filt)
 
     # Declara a saída
-    dLo = zeros(Float64,size(dLf,1))
+    dLo = zeros(Float64,size(dLi,1))
 
     if filt.filtro == "Dens"
-        dLo = dL_Dens(dLf, filt)
+        dLo = dL_Dens(dLi, filt)
     elseif filt.filtro == "Off"
-        dLo = copy(dLf)
+        dLo = copy(dLi)
     else
       error("Erro na declaracao do Filtro")
     end
@@ -39,8 +39,8 @@ end
 function Proc_Vizinhos(nelems,coord,conect,raiof)
 
     # Inicializa a matriz de vizinhos, distancias e quantidade de vizinhos
-    vizi = zeros(Int64,nelems,nelems)
-    dviz = zeros(Float64,nelems,nelems)
+    vizi = zeros(Int64,nelems,100)
+    dviz = zeros(Float64,nelems,100) # Vai dar erro se o filtro for muito grande
     nviz = zeros(Int64,nelems)
 
     # Inicializa centro dos elementos em estudo
@@ -62,7 +62,7 @@ function Proc_Vizinhos(nelems,coord,conect,raiof)
             ck[2] = (coord[n1,2]+coord[n3,2])/2.0
 
             # Calcula a distancia entre os elementos
-            dkj = sqrt((ck[1]-cj[1])^2.0+(ck[2]-cj[2])^2.0)
+            dkj = norm(ck-cj)
 
             # Se for menor do que o raio, eles são vizinhos
             if dkj <= raiof
@@ -78,6 +78,9 @@ function Proc_Vizinhos(nelems,coord,conect,raiof)
 
     # Verifica o elemento com mais vizinho e reduz matrizes
     big = maximum(nviz)
+    if big == 0
+        big = 1
+    end
     vizi = vizi[:,1:big]
     dviz = dviz[:,1:big]
 
@@ -98,24 +101,28 @@ function Filtro_Dens(xi,filt)
     raiof = filt.raiof
 
     # Varre os elementos
-    for k = 1:nelems
+    for ele = 1:nelems
 
         # Zera acumuladores
         dividen = 0.0
         divisor = 0.0
 
         # Acumula somatórios para cada vizinho de k
-        for j = 1:nviz[k]
+        for viz = 1:nviz[ele]
+
             #pesoH    = raiof - dviz[k,j]
-            pesoH    = 1.0 - dviz[k,j]/raiof
-            dividen += pesoH*xi[vizi[k,j]]
+            pesoH    = 1.0 - dviz[ele,viz]/raiof
+
+            vz = vizi[ele,viz]
+
+            dividen += pesoH*xi[vz]
             divisor += pesoH
-        end
+        end #viz
 
         # Filtra elemento
-        xo[k] = dividen/divisor
+        xo[ele] = dividen/divisor
 
-    end
+    end #ele
 
     return xo
 end
