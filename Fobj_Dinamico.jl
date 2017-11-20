@@ -2,7 +2,7 @@
 function F_Lagrangiana(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Float64, fem, valor_zero)
 
     # Obtem o valor do objetivo e das restricoes
-    valor_fun, valor_res, fem = F_Obj(x, fem, valor_zero)
+    valor_fun, valor_res = F_Obj(x, fem, valor_zero)
 
     # Dimensoes do problema
     numvar = size(x,1)
@@ -52,7 +52,7 @@ function F_Obj(x, fem ,valor_zero)
     fem.KD = KDL
     fem.UD = UDL
 
-    return fun, res, fem
+    return fun, res
 end
 
 function Sensibilidade(x::Array{Float64,1}, valor_res, mult_res::Array{Float64,1}, rho::Float64, count::Int64, fem, filt, valor_zero)

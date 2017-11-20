@@ -1,8 +1,9 @@
 # Define o Função Objetivo
-function F_Lagrangiana(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Float64, fem, valor_zero)
+function F_Lagrangiana(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Float64,
+                       fem_v, fem_f) #, valor_zero)
 
     # Obtem o valor do objetivo e das restricoes
-    valor_fun, valor_res, fem = F_Obj(x, fem, valor_zero)
+    valor_fun, valor_res = F_Obj(x, fem_v, fem_f) #, valor_zero)
 
     # Dimensoes do problema
     numvar = size(x,1)
@@ -21,17 +22,17 @@ function F_Lagrangiana(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Flo
 end
 
 
-function F_Obj(x, fem, valor_zero)
+function F_Obj(x::Array{Float64,1}, fem_v, fem_f)#, valor_zero)
 
     # Remonta matriz de rigidez global, aqui é aplicado o SIMP
-    KGL = Global_K(fem.nelems,fem.conect,fem.ID,fem.K0,x,fem.simp)
-    FL  = fem.F
+    KGL,MGL = Global_KM(x,fem_f.nelems,fem_f.conect,fem_f.ID,fem_f.K0,fem_f.M0,fem_f.simp)
+    FL  = fem_f.F
 
     # Resolve o sistema novamente
-    UEL = vec(lufact(KGL)\fem.F);
+    UEL = vec(lufact(KGL)\FL);
 
     # Função objetivo, flexibilidade estática
-    fun = FL'*UEL
+    fun = dot(FL,UEL)
 
     #if valor_zero != 0.0
     #    fun = fun/valor_zero
@@ -41,22 +42,29 @@ function F_Obj(x, fem, valor_zero)
     res = [ (mean(x)-0.49)/0.51 ]
 
     # Salva em fem
-    fem.KG = KGL
-    fem.UE = UEL
+    fem_v.KG = KGL
+    fem_v.UE = UEL
 
-    return fun, res, fem
+    return fun, res
 end
 
-function Sensibilidade(x::Array{Float64,1}, valor_res, mult_res::Array{Float64,1}, rho::Float64, count::Int64, fem, filt, valor_zero)
+function Sensibilidade(x::Array{Float64,1}, valor_res::Array{Float64,1}, mult_res::Array{Float64,1},
+                       rho::Float64, fem_v, fem_f, filt)#, valor_zero)
+
+    nelems = fem_f.nelems
+    conect = fem_f.conect
+    ID     = fem_f.ID
+    simp   = fem_f.simp
+    UEL    = fem_v.UE
 
     # Inicializa a derivada interna
-    dLi = zeros(Float64,fem.nelems)
+    dLi = zeros(Float64,nelems)
 
     # Varre os elementos
-    for j=1:fem.nelems
+    for j=1:nelems
 
         # Localiza deslocamentos e lambdas
-        nos = fem.conect[j,:]
+        nos = conect[j,:]
 
         # Zera Ue, complexo para cálculos Harmônicos
         Ue = complex(zeros(Float64,8))
@@ -64,31 +72,32 @@ function Sensibilidade(x::Array{Float64,1}, valor_res, mult_res::Array{Float64,1
         # Busca o U dos nós não restritos
         for k=1:4
             for q=1:2
-                loc = fem.ID[nos[k],q]
+                loc = ID[nos[k],q]
                 if loc != 0
-                    Ue[2*k-2+q] = fem.UE[loc]
+                    Ue[2*k-2+q] = UEL[loc]
                 end #loc
             end #q
         end #k
 
         # derivada das matrizes de rigidez 109
-        dKedx  = 0.999*fem.simp*x[j]^(fem.simp-1.0)*fem.K0
+        dKedx  = 0.999*simp*x[j]^(simp-1.0)*fem_f.K0
 
         # Derivada da restrição de Volume Normalizada (1.0-0.49), 58
-        dVdx = 1.0/fem.NX/fem.NY/0.51
+        dVdx = 1.0/fem_f.NX/fem_f.NY/0.51
 
         # Renomeia as restrições e multiplicadores
         resV = valor_res[1]
         mulV =  mult_res[1]
 
         # Derivada do LA - flexibilidade estatica 57
-        dfdx = real(-Ue'*dKedx*Ue)/valor_zero
-        dLi[j] = dfdx + rho*max(0.0,mulV + rho*resV)*dVdx
+        #dfdx= real( -At_mul_B(Ue,dKedx) ) #/valor_zero
+        dfdx = real(-Ue'*dKedx*Ue)
+        dLi[j] = dfdx + max(0.0,mulV + rho*resV)*dVdx
 
     end #j
 
     # Corrige aplicando a derivada do x filtrado em relação ao x original 65
     dLi = Derivada_Filtro(dLi, filt)
 
-    return dLi,count
+    return dLi
 end

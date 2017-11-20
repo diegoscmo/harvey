@@ -37,7 +37,7 @@ function F_Obj(x, fem ,valor_zero)
     UEL = vec(lufact(KGL)\FL);
 
     # Pesos
-    A   = 0.25
+    A   = 0.01
     B   = 1.0 - A
 
     # Função objetivo, flexibilidade dinamica
@@ -73,7 +73,7 @@ function Sensibilidade(x::Array{Float64,1}, valor_res, mult_res::Array{Float64,1
     spL = fem.simp
 
     # PESOS!
-    A   = 0.25
+    A   = 0.01
     B   = 1.0 - A
 
     # Para flexibilidade dinamica
@@ -118,7 +118,7 @@ function Sensibilidade(x::Array{Float64,1}, valor_res, mult_res::Array{Float64,1
         # Derivada do LA - flexibilidade dinamica + estatica 57
         df1dx  = real(-a*(UDe'*dKDedx*UDe))     #/valor_zero
 
-        df2dx  = real(UEe'*dKedx*UEe)
+        df2dx  = real(-UEe'*dKedx*UEe)
 
         dLi[j] = A*df1dx + B*df2dx + max(0.0, mulV + rho*resV)*dVdx
 

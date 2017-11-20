@@ -1,5 +1,9 @@
-function GeraMalha(nnos::Int64,nelems::Int64,LX::Float64,LY::Float64,NX::Int64,NY::Int64,npresos::Int64,presos::Array{Float64,2},
-                   nforcas::Int64, forcas::Array{Float64,2})
+function GeraMalha(nnos::Int64, nelems::Int64, LX::Float64, LY::Float64, NX::Int64, NY::Int64,
+                   presos::Array{Float64,2}, forcas::Array{Float64,2})
+
+   # Define o tamanho dos vetores das condições de contorno
+   npresos = size(presos,1)            # Nr. de apoios
+   nforcas = size(forcas,1)            # Nr. de carregamentos
 
    # Define a menor dimensao de um elemento, para fins de tolerancia dimensional
    deltax = LX/NX
@@ -27,10 +31,8 @@ function GeraMalha(nnos::Int64,nelems::Int64,LX::Float64,LY::Float64,NX::Int64,N
         coordy = coordy + deltay;
     end #coluna
 
-
    # Gera as conectividades
    ijk = zeros(Int64,nelems,4)
-
 
    noi::Int64 = 1
    ele::Int64 = 1
@@ -49,7 +51,6 @@ function GeraMalha(nnos::Int64,nelems::Int64,LX::Float64,LY::Float64,NX::Int64,N
       # Ja somamos 1 no final do loop anterior...
       noi = noi + 1
    end # linha
-
 
    # Para cada região com informacoes de condições de contorno,
    # varremos todos os nós que podem estar dentro do retângulo

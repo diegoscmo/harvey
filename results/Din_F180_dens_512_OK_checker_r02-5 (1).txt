@@ -1,0 +1,75 @@
+
+  LagAug:: 2017-11-17-14-15-21
+
+  Nelems:: 512 // Iter:: 100/200 // Tol:: 1.0e-5/1.0e-5
+
+  Filtro:: Dens // raiof:: 0.031 // pSIMP 3.0 // freq: 180.0
+
+  iter: 0 	origin. fitness: 2.561381e-01	volume:	0.49000 
+  rho: 0.2000 		mults. lagrange: [0.0]
+			val. restrições: [1.30614e-15]
+  		passos internos: 200		evals: 2975
+
+  iter: 1 	origin. fitness: 1.225777e-01	volume:	0.51799 
+  rho: 0.2200 		mults. lagrange: [0.0109784]
+			val. restrições: [0.0548918]
+  		passos internos: 200		evals: 5835
+
+  iter: 2 	origin. fitness: 1.215854e-01	volume:	0.51986 
+  rho: 0.2420 		mults. lagrange: [0.0238587]
+			val. restrições: [0.0585471]
+  		passos internos: 200		evals: 8498
+
+  iter: 3 	origin. fitness: 1.200414e-01	volume:	0.52257 
+  rho: 0.2662 		mults. lagrange: [0.0393149]
+			val. restrições: [0.0638688]
+  		passos internos: 200		evals: 11422
+
+  iter: 4 	origin. fitness: 1.180139e-01	volume:	0.52591 
+  rho: 0.2928 		mults. lagrange: [0.0580598]
+			val. restrições: [0.0704166]
+  		passos internos: 200		evals: 14099
+
+  iter: 5 	origin. fitness: 1.151137e-01	volume:	0.53019 
+  rho: 0.3221 		mults. lagrange: [0.0811372]
+			val. restrições: [0.0788106]
+  		passos internos: 200		evals: 16283
+
+  iter: 6 	origin. fitness: 5.623942e-02	volume:	0.43515 
+  rho: 0.3543 		mults. lagrange: [0.0464985]
+			val. restrições: [-0.107539]
+  		passos internos: 200		evals: 18578
+
+  iter: 7 	origin. fitness: 4.539099e-02	volume:	0.49640 
+  rho: 0.3897 		mults. lagrange: [0.0509468]
+			val. restrições: [0.0125548]
+  		passos internos: 200		evals: 21043
+
+  iter: 8 	origin. fitness: 4.441708e-02	volume:	0.48136 
+  rho: 0.4287 		mults. lagrange: [0.0443447]
+			val. restrições: [-0.0169397]
+  		passos internos: 200		evals: 23455
+
+  iter: 9 	origin. fitness: 4.228763e-02	volume:	0.47146 
+  rho: 0.4716 		mults. lagrange: [0.0287603]
+			val. restrições: [-0.0363511]
+  		passos internos: 200		evals: 25901
+
+  iter: 10 	origin. fitness: 4.103766e-02	volume:	0.49041 
+  rho: 0.5187 		mults. lagrange: [0.0291417]
+			val. restrições: [0.000808612]
+  		passos internos: 200		evals: 31149
+
+  iter: 11 	origin. fitness: 4.069353e-02	volume:	0.47681 
+  rho: 0.5706 		mults. lagrange: [0.0157222]
+			val. restrições: [-0.0258689]
+  		passos internos: 200		evals: 33558
+
+  iter: 12 	origin. fitness: 3.989661e-02	volume:	0.49229 
+  rho: 0.6277 		mults. lagrange: [0.0182882]
+			val. restrições: [0.00449686]
+  		passos internos: 200		evals: 40110
+
+  iter: 13 	origin. fitness: 3.953803e-02	volume:	0.48556 
+  rho: 0.6905 		mults. lagrange: [0.0128271]
+			val. restrições: [-0.00870041]

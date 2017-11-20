@@ -1,7 +1,7 @@
 #
 #   Identifica se há filtro em x e aplica
 #
-function Aplica_Filtro(xi, filt)
+function Aplica_Filtro(xi::Array{Float64,1}, filt)
 
     if filt.filtro == "Dens"
         xo = Filtro_Dens(xi, filt)
@@ -16,7 +16,7 @@ end
 #
 #   Identifica se a derivada precisa de correção e a executa
 #
-function Derivada_Filtro(dLi, filt)
+function Derivada_Filtro(dLi::Array{Float64,1}, filt)
 
     # Declara a saída
     dLo = zeros(Float64,size(dLi,1))
@@ -36,11 +36,11 @@ end
 #
 # Identifica os vizinhos de cada elemento e a distancia entre eles
 #
-function Proc_Vizinhos(nelems,coord,conect,raiof)
+function Proc_Vizinhos(nelems::Int64,coord::Array{Float64,2},conect::Array{Int64,2},raiof::Float64)
 
     # Inicializa a matriz de vizinhos, distancias e quantidade de vizinhos
-    vizi = zeros(Int64,nelems,100)
-    dviz = zeros(Float64,nelems,100) # Vai dar erro se o filtro for muito grande
+    vizi = zeros(Int64,nelems,200)
+    dviz = zeros(Float64,nelems,200) # Vai dar erro se o filtro for muito grande
     nviz = zeros(Int64,nelems)
 
     # Inicializa centro dos elementos em estudo
@@ -90,7 +90,7 @@ end
 #
 # Aplica filtro de densidades, pág 65
 #
-function Filtro_Dens(xi,filt)
+function Filtro_Dens(xi::Array{Float64,1},filt)
 
     # Inicializa vetor de saída
     nelems = size(xi,1)
@@ -101,14 +101,14 @@ function Filtro_Dens(xi,filt)
     raiof = filt.raiof
 
     # Varre os elementos
-    for ele = 1:nelems
+    @inbounds for ele = 1:nelems
 
         # Zera acumuladores
         dividen = 0.0
         divisor = 0.0
 
         # Acumula somatórios para cada vizinho de k
-        for viz = 1:nviz[ele]
+        @inbounds for viz = 1:nviz[ele]
 
             #pesoH    = raiof - dviz[k,j]
             pesoH    = 1.0 - dviz[ele,viz]/raiof
@@ -139,13 +139,13 @@ function dL_Dens(dLd, filt)
     raiof = filt.raiof
 
     # Varre m elementos
-    for m=1:size(dLd,1)
+    @inbounds for m=1:size(dLd,1)
 
       # Define vizinhos de m
       vizm = vizi[m,1:nviz[m]]
 
       # Varre os vizinhos de m
-      for k in vizm
+      @inbounds for k in vizm
 
         # Posição de m na tabela de vizinhanca
         pos = findfirst(vizi[k,1:nviz[k]],m)
@@ -156,7 +156,7 @@ function dL_Dens(dLd, filt)
 
         # Loop para denominador da filtragem, Hjk
         soma = 0.0
-        for j=1:nviz[k]
+        @inbounds for j=1:nviz[k]
           #soma += raiof - dviz[k,j]
           soma += 1.0 - dviz[k,j]/raiof
         end #j
