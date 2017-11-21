@@ -1,9 +1,9 @@
 function Equal_Search(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Float64,
    dir::Array{Float64,1}, xl::Array{Float64,1}, xu::Array{Float64,1}, tol_int::Float64, count::Int64,
-    fem_v, fem_f, filt)#,valor_zero)
+    fem_v, fem_f, filt, step_min::Float64)
 
     # Define um valor minimo de passo
-    const minimo = 1E-12
+    const minimo = step_min
     # E o passo inicial
     const delta = 0.1
 

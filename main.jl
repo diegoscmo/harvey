@@ -1,11 +1,10 @@
 ################################################################################
 # Lagrangiano Aumentado // Otimização Topológica
 ################################################################################
-# cd(ENV["HARVEY"]); using StaticArrays;
-# include("Main.jl");main()
 
-# Limpa tudo
-#workspace();
+# Copiar para o console para executar:
+# cd(ENV["HARVEY"]); using StaticArrays;
+# include("main.jl"); main();
 
 # Carrega os arquivos com as rotinas de elementos finitos
 include("fem\\Gera_Malha.jl")       # GeraMalha, gl_livres_elemento
@@ -16,22 +15,26 @@ include("fem\\Gmsh.jl")             # Funções GMSH
 # Carrega os arquivos com as rotinas para otimização
 include("opt\\Opt_Methods.jl")          # Método de Descida
 
-# Carrega cálculo das derivadas
-include("Fobj_Estatico.jl")         # Fobj e Sensibilidades
+# Carrega cálculo da Fobj, Lagrangiana e derivadas, selecionar um
+#include("Fobj_Estatico.jl")
+#include("Fobj_Dinamico.jl")
+include("Fobj_Din_Est.jl")
 
 # Etc
 include("Filtros.jl")               # Filtros de densidades e sensibilidades
 include("Saida.jl")                 # Impressão das saídas em arquivo e console
 
+# Gera tipo com as variáveis de finitos que podem mudar
 mutable struct finitos_var
     KG::SparseMatrixCSC{Float64,Int64}
     CG::SparseMatrixCSC{Float64,Int64}
     MG::SparseMatrixCSC{Float64,Int64}
     KD::SparseMatrixCSC{Complex{Float64},Int64}
     UE::Array{Float64,1}
-    UD::Array{Float64,1}
+    UD::Array{Complex{Float64},1}
 end
 
+# Gera tipo com as variáveis de finitos fixas
 struct finitos_fix
      F::Array{Float64,1}
     K0::StaticArrays.SArray{Tuple{8,8},Float64,2,64}
@@ -45,8 +48,11 @@ struct finitos_fix
     w::Float64
     alfa::Float64
     beta::Float64
+    vminimo::Float64
+    Amult:: Float64
 end
 
+# Gera tipo com informações do filtro
 struct filtros
       raiof::Float64;
        vizi::Array{Int64,2}
@@ -55,40 +61,46 @@ struct filtros
      filtro::String
 end
 
+# Rotina principal
 function main()
 
-    # Horario de Execução
-    dtf = Dates.now()
-    dts = Dates.format(dtf,"YYYY-mm-dd-HH-MM-SS")
+    # Nome do Arquivo ou data de execução
+    dts = ""
+    if dts == ""
+        dts = Dates.format(Dates.now(),"YYYY-mm-dd-HH-MM-SS")
+    end
     tic();
 
     # Parâmetros do Lagrangiano Aumentado
-    max_ext     = 100       # Máximo de iteracoes externas
+    max_ext     = 150       # Máximo de iteracoes externas
     max_int     = 200       # Máximo de iterações internas
-    tol_ext     = 1E-6      # Tolerância do laço externo
+    tol_ext     = 5E-6      # Tolerância do laço externo
     tol_int     = 1E-6      # Tolerância do laço interno
-    rho_ini     = 0.25
-    rho_max     = 0.5       # Valor maximo de rho
+    rho_ini     = 0.3       # Valor inicial de rho
+    rho_max     = 0.8      # Valor maximo de rho
     mult_max    = 10.0      # Valor maximo dos multiplicadores
 
-    # Métodos de busca
-    descent     = "BFGS"   # Steep, BFGS, FR, DFP
-    lsearch     = "Equal"   # Equal, Golden, Back
+    # Métodos de busca a utilizar no laço interno
+    descent     = "BFGS"    # Steep, BFGS, FR, DFP
+    lsearch     = "Equal"   # Equal, #FIXME falta corrigir Golden e Back
+    step_min    = 1E-12     # Passo mínimo do line search
 
     # Parâmetros da topológica
     dens_ini    = 0.49      # Volume/Pseudo-densidades iniciais
     simp        = 3.0       # Parametro p do SIMP
     raiof       = 0.031     # Tamanho do filtro [m]
     filtro      = "Dens"    # Filtros: (Off ou Dens)
+    vminimo     = 0.001     # Fração mínima da Elast/Densidade
+    Amult       = 0.25      # Peso da Harmônica na Fobj, para Din_Est
 
     # Parâmetros do problema Harmônico
-    f    = 0.0      # Frequencia
-    alfa = 0.0      # Amortecimento proporcional de Rayleigh
+    f    = 180.0      # Frequência
+    alfa = 0.0        # Amortecimento proporcional de Rayleigh
     beta = 1E-8
 
-    # Parâmetros do problema de FEM
-    NX = 100   #80        # Nr. de elementos em X
-    NY = 50   #40        # Nr. de elementos em Y
+    # Parâmetros do problema de FEM, 60x30 = 1800
+    NX = 60              # Nr. de elementos em X
+    NY = 30              # Nr. de elementos em Y
 
     # Definição geométrica do problema (retângulo):
     LX = 1.0       # Comprimento em X
@@ -138,7 +150,7 @@ function main()
     w = 2.0*pi*f
 
     # Monta matrizes de rigidez e massa Globais, aqui é aplicado o SIMP e  CORREÇÔES OLHOF&DU!
-    KG,MG = Global_KM(x, nelems, conect, ID, K0, M0, simp)
+    KG,MG = Global_KM(x, nelems, conect, ID, K0, M0, simp, vminimo)
     F     =  Global_F(ID, nos_forcas, gdl_livres)
 
     # Monta CG e KD (Harmônica)
@@ -151,14 +163,10 @@ function main()
 
     # Agrupa nos tipos
     fem_v = finitos_var(KG, CG, MG, KD, UE, UD)
-    fem_f = finitos_fix(F, K0, M0, simp, nelems, conect, NX, NY, ID, w, alfa, beta)
+    fem_f = finitos_fix(F, K0, M0, simp, nelems, conect, NX, NY, ID, w, alfa, beta, vminimo, Amult)
 
     # Obtem os valores de f e g em x0 para o calculo de c0
-    valor_fun, valor_res = F_Obj(x, fem_v, fem_f)#, 0.0)
-
-    # Salva o valor da primeira função para
-    #valor_zero = copy(valor_fun)
-    #valor_fun  = 1.0
+    valor_fun, valor_res = F_Obj(x, fem_v, fem_f)
 
     # Inicializa multiplicadores de Lagrange (u)
     numres   = size(valor_res, 1)
@@ -185,10 +193,10 @@ function main()
 
         # Soluciona o problema interno (e salva a derivada)
         x, dL, count, n_int = Descent(x, valor_res, mult_res, rho, xl, xu,
-                                max_int, tol_int, count, fem_v, fem_f, filt, descent, lsearch)#, valor_zero)
+                                max_int, tol_int, count, fem_v, fem_f, filt, descent, lsearch, step_min)
 
         # Verifica novos valores da função e restrições
-        valor_fun, valor_res = F_Obj(x, fem_v, fem_f)#, valor_zero)
+        valor_fun, valor_res = F_Obj(x, fem_v, fem_f)
 
         # Atualiza o valor o multiplicador das restricoes (u)
         mult_res = min.(mult_max, max.(rho*valor_res + mult_res, 0.0))

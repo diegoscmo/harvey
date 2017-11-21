@@ -1,11 +1,11 @@
 function Golden_Search(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Float64,
    dir::Array{Float64,1}, xl::Array{Float64,1}, xu::Array{Float64,1}, tol_int::Float64, count::Int64,
-    fem_v, fem_f, filt)
+    fem_v, fem_f, filt, step_min::Float64)
 
     # Define um valor minimo de passo
-    const minimo = 1E-12
+    const minimo = step_min
     # o passo inicial,
-    const delta = 0.1
+    const delta = 1.0
     # e o golden ratio
     const GR = (sqrt(5.)-1)/2.
     const GR2 = GR^2
@@ -61,9 +61,11 @@ function Golden_Search(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Flo
     l2f = Aplica_Filtro(l2, filt)
     fl2 = F_Lagrangiana(l2f, mult_res, rho, fem_v, fem_f)
     count += 2
+    ad = 0.0
+    bd = delta
 
     # Enquanto for menor que a tolerancia,
-    while norm(L) > tol_int
+    while (bd-ad) > tol_int
 
       # Verifica qual secao remover
       if fl1 > fl2
@@ -75,6 +77,13 @@ function Golden_Search(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Flo
         l2 = a + GR*L
         l2f = Aplica_Filtro(l2, filt)
         fl2 = F_Lagrangiana(l2f, mult_res, rho, fem_v, fem_f)
+
+        # Calcula o delta para A
+        ad =+ GR*(bd-ad)
+
+        # Recalcula delta com a media do intervalo
+        delta = (bd-ad)/2.0
+
         count += 1
       else
         # Remove a parte superior
@@ -85,13 +94,17 @@ function Golden_Search(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Flo
         l1  = a + GR2*L
         l1f = Aplica_Filtro(l1, filt)
         fl1 = F_Lagrangiana(l1f, mult_res, rho, fem_v, fem_f)
+
+        # Calcula o delta para B
+        bd -= GR*(bd-ad)
+
+        # Recalcula delta com a media do intervalo
+        delta = (bd-ad)/2.0
+
         count += 1
       end #if
 
-      # Recalcula delta com o maior dir
-      (dir,ind) = findmax(dir)
-      delta = L[ind]/dir
-      #println(delta)
+
 
       # Se delta ficar muito pequeno, define como o minimo
       if delta < minimo

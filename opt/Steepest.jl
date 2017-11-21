@@ -1,12 +1,20 @@
 function Steepest(x::Array{Float64,1}, valor_res, mult_res::Array{Float64,1},rho::Float64,xl::Array{Float64,1},
                   xu::Array{Float64,1}, max_int::Int64, tol_int::Float64, count::Int64,
-                  fem_v, fem_f, filt, lsearch::String) #,valor_zero)
+                  fem_v, fem_f, filt, lsearch::String, step_min::Float64) #,valor_zero)
 
+    # Lê número de variáveis
     numvar = size(x,1)
+
+    # Inicializa os vetores para derivadas
     dL = zeros(Float64,numvar)
-    #contaestag = 0
+
+    # Inicializa o contador de iterações internas
     n_int = 0
+
+    # Critério adicional de saída, vezes com passo mínimo
+    minimo = step_min
     breaker = 0
+    max_break = 20
 
     for i=1:max_int
 
@@ -19,17 +27,10 @@ function Steepest(x::Array{Float64,1}, valor_res, mult_res::Array{Float64,1},rho
 
         # Calcula o gradiente de L
         dL = Sensibilidade(xf, valor_res, mult_res, rho, fem_v, fem_f, filt)#, valor_zero)
-        #dL, count = Dif_Fin(x, mult_res, rho, count, fem, valor_zero)
-        #dL = Derivada_Filtro(dL, filt)   #caos use diferenças finitas
 
         # Direcao de minimizacao
         norma = norm(dL)
         dir = -dL/norma
-
-    #    if i==max_int
-    #    writedlm("alal.txt",[dLv dL])
-    #    error("aa")
-    #end
 
         # Bloqueia a direcao e zera o gradiente se bloqueado
         @inbounds @simd for j=1:numvar
@@ -52,19 +53,21 @@ function Steepest(x::Array{Float64,1}, valor_res, mult_res::Array{Float64,1},rho
         end
 
         # Search nesta direcao
-        alpha,count = LineSearch(x, mult_res, rho, dir, xl, xu, tol_int, count, fem_v, fem_f, filt, lsearch)#, valor_zero)
+        alpha,count = LineSearch(x, mult_res, rho, dir, xl, xu, tol_int, count, fem_v, fem_f, filt, lsearch, step_min)
 
         # incrementa a estimativa do ponto
         x = x + alpha*dir
 
-        if alpha == 1E-12
-            breaker += 1
-        end
-        if breaker >= 50
-            break
-        end
         # Número de passos internos
         n_int += 1
+
+        # Critério adicional de saída
+        if alpha <= minimo
+            breaker += 1
+            if breaker >= max_break
+                break
+            end
+        end
 
     end #for i
 

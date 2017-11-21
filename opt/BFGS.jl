@@ -1,6 +1,6 @@
 function BFGS(x::Array{Float64,1}, valor_res, mult_res::Array{Float64,1},rho::Float64,xl::Array{Float64,1},
     xu::Array{Float64,1}, max_int::Int64, tol_int::Float64, count::Int64,
-    fem_v, fem_f, filt, lsearch::String)
+    fem_v, fem_f, filt, lsearch::String, step_min::Float64)
 
     # Lê número de variáveis
     numvar = size(x,1)
@@ -11,6 +11,11 @@ function BFGS(x::Array{Float64,1}, valor_res, mult_res::Array{Float64,1},rho::Fl
 
     # Inicializa o contador de iterações internas
     n_int = 0
+
+    # Critério adicional de saída, vezes com passo mínimo
+    minimo = step_min
+    breaker = 0
+    max_break = 50
 
     # inicializa aproximacao da hessiana
     G = eye(Float64,numvar)
@@ -39,7 +44,7 @@ function BFGS(x::Array{Float64,1}, valor_res, mult_res::Array{Float64,1},rho::Fl
         xf = Aplica_Filtro(x, filt)
 
         # Atualiza as matrizes de elementos finitos filtrados
-        fun, res = F_Obj(xf, fem_v, fem_f)#, valor_zero)
+        fun, res = F_Obj(xf, fem_v, fem_f)
         count += 1
 
         # Calcula o gradiente de L
@@ -74,13 +79,21 @@ function BFGS(x::Array{Float64,1}, valor_res, mult_res::Array{Float64,1},rho::Fl
         end
 
         # Line search nesta direcao
-        alpha,count = LineSearch(x, mult_res, rho, dL, dir, xl, xu, tol_int, count, fem_v, fem_f, filt, lsearch)
+        alpha,count = LineSearch(x, mult_res, rho, dL, dir, xl, xu, tol_int, count, fem_v, fem_f, filt, lsearch, step_min)
 
         # incrementa a estimativa do ponto
         x = x + alpha*dir
 
         # E o número de iterações internas
         n_int += 1
+
+        # Critério adicional de saída
+        if alpha <= minimo
+            breaker += 1
+            if breaker >= max_break
+                break
+            end
+        end
 
     end #for i
 

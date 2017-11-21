@@ -1,6 +1,6 @@
 function Backtracking(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Float64, dL::Array{Float64,1},
    dir::Array{Float64,1}, xl::Array{Float64,1}, xu::Array{Float64,1}, tol_int::Float64, count::Int64,
-    fem_v, fem_f, filt)
+    fem_v, fem_f, filt, step_min::Float64)
 
   # Relaxação do alfa
     const tau = 0.5
@@ -9,7 +9,7 @@ function Backtracking(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Floa
     const cc = 0.1
 
   # Define um valor minimo de passo
-    const minimo = 1E-12
+    const minimo = step_min
 
   # Calcula o valor do custo no ponto atual
     xf = Aplica_Filtro(x, filt)

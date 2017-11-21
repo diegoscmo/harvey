@@ -1,8 +1,5 @@
 function Dif_Fin(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Float64, count::Int64, fem, valor_zero)
-    #
-    # tipos, 1 = à frente, 2 = central
-    #
-
+    
     # Step para as diferenças finitas
     h = 3.0*sqrt(eps())
 
