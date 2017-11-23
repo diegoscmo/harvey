@@ -15,7 +15,7 @@ function BFGS(x::Array{Float64,1}, valor_res, mult_res::Array{Float64,1},rho::Fl
     # Critério adicional de saída, vezes com passo mínimo
     minimo = step_min
     breaker = 0
-    max_break = 50
+    max_break = fem_f.nbreaker
 
     # inicializa aproximacao da hessiana
     G = eye(Float64,numvar)
@@ -78,15 +78,34 @@ function BFGS(x::Array{Float64,1}, valor_res, mult_res::Array{Float64,1},rho::Fl
             break
         end
 
+        fmesh = string("asens.txt")
+        rm(fmesh)
+        saida  = open(fmesh,"a")
+        for z = 1:numvar
+            println(saida,dL[z])
+        end
+        close(saida)
+        error()
+
         # Line search nesta direcao
         alpha,count = LineSearch(x, mult_res, rho, dL, dir, xl, xu, tol_int, count, fem_v, fem_f, filt, lsearch, step_min)
 
         # incrementa a estimativa do ponto
         x = x + alpha*dir
 
+        # Bloqueia as variáveis que passaram
+        for j=1:numvar
+            if x[j] >= xu[j]
+                x[j] = xu[j]
+            end
+            if x[j] <= xl[j]
+                x[j] = xl[j]
+            end
+        end
+
         # E o número de iterações internas
         n_int += 1
-
+        @printf(".")
         # Critério adicional de saída
         if alpha <= minimo
             breaker += 1
@@ -96,6 +115,7 @@ function BFGS(x::Array{Float64,1}, valor_res, mult_res::Array{Float64,1},rho::Fl
         end
 
     end #for i
+    @printf("\n")
 
     return x, dL, count, n_int
 end #function

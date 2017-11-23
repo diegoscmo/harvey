@@ -15,7 +15,7 @@ function DFP(x::Array{Float64,1}, valor_res, mult_res::Array{Float64,1},rho::Flo
     # Critério adicional de saída, vezes com passo mínimo
     minimo = step_min
     breaker = 0
-    max_break = 20
+    max_break = fem_f.nbreaker
 
     # inicializa aproximacao da hessiana
     G = eye(Float64,numvar)

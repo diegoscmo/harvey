@@ -2,7 +2,8 @@
 # Dá o display dos resultados no console e arquivo
 #
 
-function Imprime_Atual(x, i_ext, n_int, count, dts, valor_fun, rho, mult_res, valor_res, nelems)
+function Imprime_Atual(x::Array{Float64,1}, i_ext::Int64, n_int::Int64, count::Int64, dts::String, valor_fun::Float64,
+                      rho::Float64, mult_res::Array{Float64,1}, valor_res::Array{Float64,1}, nelems::Int64, ndL::Float64)
 
     # Abre os arquivos
     fmesh = string("z",dts,".pos")
@@ -19,9 +20,12 @@ function Imprime_Atual(x, i_ext, n_int, count, dts, valor_fun, rho, mult_res, va
         t = toq()/60.0;
         tic();
 
-        @printf("  \t\tpassos internos: %d | T: %.3f mins | evals: %d\n",n_int,t,count)
+        @printf("  \t\tpassos internos: %d | T: %.3f mins | evals: %d | dL: %.3e\n",n_int,t,count,ndL)
 
-        @printf(saida,"  \t\tpassos internos: %d | T: %.3f mins | evals: %d\n",n_int,t,count)
+        if dts !=  "OFF"
+
+        @printf(saida,"  \t\tpassos internos: %d | T: %.3f mins | evals: %d | dL: %.3e\n",n_int,t,count,ndL)
+        end
     end
 
     # Displau dos valores atuais
@@ -33,6 +37,7 @@ function Imprime_Atual(x, i_ext, n_int, count, dts, valor_fun, rho, mult_res, va
     show(valor_res);
     @printf("\n")
 
+    if dts !=  "OFF"
     # Displau dos valores atuais
     @printf(saida,"\n  iter: %d \torigin. fitness: %.6e\tvolume:\t%.5f ", i_ext, valor_fun, vol)
     @printf(saida,"\n  rho: %.4f", rho)
@@ -45,8 +50,10 @@ function Imprime_Atual(x, i_ext, n_int, count, dts, valor_fun, rho, mult_res, va
     #FObj e volume
     println(saida2,valor_fun,"  \t",vol," \t",t)
 
-    # Saida gmsh
     Adiciona_Vista_Escalar_Gmsh(fmesh, "x", nelems, x, Float64(i_ext))
+
+    end
+    # Saida gmsh
 
 end
 
@@ -67,13 +74,16 @@ function Imprime_0(x, dts, valor_fun, rho, mult_res, valor_res, nelems, nnos,
     println("\n  Nelems:: ",nelems," | Iter:: ",max_ext,"/",max_int," | Tol:: ",tol_ext,"/",tol_int)
     println("\n  Filtro:: ",filtro," | raiof:: ",raiof, " | pSIMP:: ",simp," | freq:: ", f)
 
+    if dts !=  "OFF"
     println(saida,"\n  LagAug:: ",dts," | ",descent," | ",lsearch)
     println(saida,"\n  Nelems:: ",nelems," | Iter:: ",max_ext,"/",max_int," | Tol:: ",tol_ext,"/",tol_int)
     println(saida,"\n  Filtro:: ",filtro," | raiof:: ",raiof, " | pSIMP:: ",simp," | freq:: ", f)
 
+    Imprime_Atual(x, 0, 0, 0, dts, valor_fun, rho, mult_res, valor_res, nelems, 0.0)
+    end
     close(saida)
 
-    Imprime_Atual(x, 0, 0, 0, dts, valor_fun, rho, mult_res, valor_res, nelems)
+
 
 end
 
@@ -88,11 +98,12 @@ function Imprime_F(dts, n_int, count)
     tic();
 
     @printf("  \t\tpassos internos: %d | T: %.3f mins | evals: %d\n",n_int,t,count)
-
-    @printf(saida,"  \t\tpassos internos: %d | T: %.3f mins | evals: %d\n",n_int,t,count)
-
     @printf("\tFIM!\n")
+
+    if dts != "OFF"
+    @printf(saida,"  \t\tpassos internos: %d | T: %.3f mins | evals: %d\n",n_int,t,count)
     @printf(saida,"\tFIM!\n")
+    end
 
     close(saida)
 end

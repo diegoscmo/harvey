@@ -8,6 +8,7 @@ include("BFGS.jl")
 include("Equal_Search.jl")
 include("Golden_Search.jl")
 include("Backtracking.jl")
+include("Equal_Search_SB.jl")
 
 #
 # Seleção do método de descida
@@ -51,6 +52,8 @@ elseif lsearch == "Equal"
     alpha,count = Equal_Search(x, mult_res, rho, dir, xl, xu, tol_int, count, fem_v, fem_f, filt, step_min)
 elseif lsearch == "Back"
     alpha,count = Backtracking(x, mult_res, rho, dL, dir, xl, xu, tol_int, count, fem_v, fem_f, filt, step_min)
+elseif lsearch == "Equal_SB"
+    alpha,count = Equal_Search_SB(x, mult_res, rho, dir, xl, xu, tol_int, count, fem_v, fem_f, filt, step_min)
   else
     error("Erro na declaracao do método de Line Search")
   end

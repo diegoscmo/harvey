@@ -18,7 +18,12 @@ include("opt\\Opt_Methods.jl")          # Método de Descida
 # Carrega cálculo da Fobj, Lagrangiana e derivadas, selecionar um
 #include("Fobj_Estatico.jl")
 #include("Fobj_Dinamico.jl")
-include("Fobj_Din_Est.jl")
+#include("Fobj_Din_R-Est.jl")
+#include("Fobj_Din_Est.jl")
+include("Fobj_Potencia.jl")
+
+#Caso queira validar com diferenças finitas...
+#include("opt\\Dif_Fin.jl")
 
 # Etc
 include("Filtros.jl")               # Filtros de densidades e sensibilidades
@@ -32,6 +37,8 @@ mutable struct finitos_var
     KD::SparseMatrixCSC{Complex{Float64},Int64}
     UE::Array{Float64,1}
     UD::Array{Complex{Float64},1}
+    Ep::Float64
+    Ec::Float64
 end
 
 # Gera tipo com as variáveis de finitos fixas
@@ -49,7 +56,10 @@ struct finitos_fix
     alfa::Float64
     beta::Float64
     vminimo::Float64
-    Amult:: Float64
+    nbreaker::Int64
+    Amult::Float64
+    Est_0::Float64
+    Din_0::Float64
 end
 
 # Gera tipo com informações do filtro
@@ -64,7 +74,7 @@ end
 # Rotina principal
 function main()
 
-    # Nome do Arquivo ou data de execução
+    # Nome do Arquivo ou data de execução("OFF desliga")
     dts = ""
     if dts == ""
         dts = Dates.format(Dates.now(),"YYYY-mm-dd-HH-MM-SS")
@@ -73,17 +83,18 @@ function main()
 
     # Parâmetros do Lagrangiano Aumentado
     max_ext     = 150       # Máximo de iteracoes externas
-    max_int     = 200       # Máximo de iterações internas
-    tol_ext     = 5E-6      # Tolerância do laço externo
+    max_int     = 50       # Máximo de iterações internas
+    tol_ext     = 1E-6      # Tolerância do laço externo
     tol_int     = 1E-6      # Tolerância do laço interno
-    rho_ini     = 0.3       # Valor inicial de rho
-    rho_max     = 0.8      # Valor maximo de rho
+    rho_ini     = 0.25      # Valor inicial de rho
+    rho_max     = 0.6       # Valor maximo de rho
     mult_max    = 10.0      # Valor maximo dos multiplicadores
 
     # Métodos de busca a utilizar no laço interno
     descent     = "BFGS"    # Steep, BFGS, FR, DFP
     lsearch     = "Equal"   # Equal, #FIXME falta corrigir Golden e Back
     step_min    = 1E-12     # Passo mínimo do line search
+    nbreaker    = 50        # Número máximo de passos mínimos
 
     # Parâmetros da topológica
     dens_ini    = 0.49      # Volume/Pseudo-densidades iniciais
@@ -94,13 +105,13 @@ function main()
     Amult       = 0.25      # Peso da Harmônica na Fobj, para Din_Est
 
     # Parâmetros do problema Harmônico
-    f    = 180.0      # Frequência
+    f    = 100.0      # Frequência
     alfa = 0.0        # Amortecimento proporcional de Rayleigh
     beta = 1E-8
 
     # Parâmetros do problema de FEM, 60x30 = 1800
-    NX = 60              # Nr. de elementos em X
-    NY = 30              # Nr. de elementos em Y
+    NX = 40              # Nr. de elementos em X
+    NY = 20              # Nr. de elementos em Y
 
     # Definição geométrica do problema (retângulo):
     LX = 1.0       # Comprimento em X
@@ -161,9 +172,17 @@ function main()
     UE = vec(lufact(KG)\F);
     UD = vec(lufact(KD)\F);
 
+    # Resultado da primeira análise
+    Est_0 = abs(dot(F,UE))
+    Din_0 = abs(dot(F,UD))
+
+    # Energia Potencial e Cinética
+    Ep = real(UD'*MG*UD)
+    Ec = real(UD'*KG*UD)
+
     # Agrupa nos tipos
-    fem_v = finitos_var(KG, CG, MG, KD, UE, UD)
-    fem_f = finitos_fix(F, K0, M0, simp, nelems, conect, NX, NY, ID, w, alfa, beta, vminimo, Amult)
+    fem_v = finitos_var(KG, CG, MG, KD, UE, UD, Ep, Ec)
+    fem_f = finitos_fix(F, K0, M0, simp, nelems, conect, NX, NY, ID, w, alfa, beta, vminimo, nbreaker, Amult, Est_0, Din_0)
 
     # Obtem os valores de f e g em x0 para o calculo de c0
     valor_fun, valor_res = F_Obj(x, fem_v, fem_f)
@@ -173,8 +192,12 @@ function main()
     mult_res = zeros(numres)
 
     # Define fator de penalização inicial (c)
-    #rho = max.(1E-6,min(rho_max,(2.0*abs(valor_fun)/norm(max.(valor_res,0.))^2.)))
-    rho = rho_ini
+    rho = max.(1E-6,min(rho_max,(2.0*abs(valor_fun)/norm(max.(valor_res,0.))^2.)))
+
+    # Usa rho_min se a função começar não restrita
+    if rho == rho_max
+        rho = rho_ini
+    end
 
     # E calcula o criterio de atualizacao do c
     crho_ant = max.(0.,norm(max.(valor_res, -mult_res/rho)))
@@ -207,11 +230,14 @@ function main()
             rho = min.(1.1*rho, rho_max)
         end # if
 
+        # Norma de dL para display e saída
+        ndL = norm(dL)
+
         # Imprime resultado atual e plota saida para o gmsh
-        Imprime_Atual(x, i_ext, n_int, count, dts, valor_fun, rho, mult_res, valor_res, nelems)
+        Imprime_Atual(x, i_ext, n_int, count, dts, valor_fun, rho, mult_res, valor_res, nelems, ndL)
 
         # Verifica os criterios:
-        if  norm(dL)                   <= tol_ext &&  # Condicao de gradiente
+        if  ndL                        <= tol_ext &&  # Condicao de gradiente
             norm(max.(valor_res, 0.0)) <= tol_ext &&  # Condicao de viabilidade
             norm(valor_res'*mult_res)  <  tol_ext     # Cond. de complementariedade
             break

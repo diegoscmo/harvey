@@ -50,7 +50,7 @@ function Sensibilidade(x::Array{Float64,1}, valor_res::Array{Float64,1}, mult_re
     nelems = fem_f.nelems
     conect = fem_f.conect
     ID     = fem_f.ID
-    simp   = fem_f.simp
+    spL   = fem_f.simp
     UEL    = fem_v.UE
 
     # Inicializa a derivada interna
@@ -66,14 +66,14 @@ function Sensibilidade(x::Array{Float64,1}, valor_res::Array{Float64,1}, mult_re
         nos = conect[j,:]
 
         # Zera Ue, complexo para cálculos Harmônicos
-        Ue = complex(zeros(Float64,8))
+        UEe = zeros(Float64,8)
 
         # Busca o U dos nós não restritos
         for k=1:4
             for q=1:2
                 loc = ID[nos[k],q]
                 if loc != 0
-                    Ue[2*k-2+q] = UEL[loc]
+                    UEe[2*k-2+q] = UEL[loc]
                 end #loc
             end #q
         end #k
@@ -89,8 +89,7 @@ function Sensibilidade(x::Array{Float64,1}, valor_res::Array{Float64,1}, mult_re
         mulV =  mult_res[1]
 
         # Derivada do LA - flexibilidade estatica 57
-        #dfdx= real( -At_mul_B(Ue,dKedx) ) #FIXME, deu pau!
-        dfdx = real(-Ue'*dKedx*Ue)
+        dfdx = real(-UEe'*dKedx*UEe)
         dLi[j] = dfdx + max(0.0,mulV + rho*resV)*dVdx
 
     end #j

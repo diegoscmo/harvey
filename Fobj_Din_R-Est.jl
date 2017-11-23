@@ -26,33 +26,23 @@ function F_Obj(x, fem_v, fem_f)
     # Acessa variáveis usadas mais de uma vez na rotina
     FL = fem_f.F
     wL = fem_f.w
-    alfaL = fem_f.alfa
-    betaL = fem_f.beta
 
     # Monta matrizes de rigidez e massa Globais, aqui é aplicado o SIMP e  CORREÇÔES OLHOF&DU!
     KGL, MGL = Global_KM(x,fem_f.nelems,fem_f.conect,fem_f.ID,fem_f.K0,fem_f.M0,fem_f.simp,fem_f.vminimo)
-    CGL = alfaL*MGL + betaL*KGL
+    CGL = fem_f.alfa*MGL + fem_f.beta*KGL
     KDL = KGL + wL*im*CGL - (wL^2.0)*MGL
 
     # Resolve o sistema novamente
     UDL = vec(lufact(KDL)\FL);
+    UEL = vec(lufact(KGL)\FL)
 
-    # Energia Potencial e Cinética
-    #EpL = real(UDL'*MGL*UDL)
-    #EcL = real(UDL'*KGL*UDL)
-
-    # Função objetivo, potencia
-    #fun = 2.0*(alfaL*EcL + betaL*(wL^2.0)*EpL)
-
-    Pa = 0.5*wL*real(im*dot(FL,UDL))
-
-    fun = Pa
-    #fun = 100.0 + 10.0*log10(Pa)
-    #real(0.5*(wL^2.0)*(conj(UDL)'*CGL*UDL))
-
+    # Função objetivo, flexibilidade dinamica
+    fun = abs(dot(FL,UDL))
 
     # Funções de restrição, volume normalizada
-    res = [ (mean(x)-0.49)/0.51 ]
+    res = [ (mean(x)-0.49)/0.51
+    # Flexibilidade estática
+            -1.0 + abs(dot(FL,UEL))/fem_f.Est_0 ]
 
     # Salva em fem
     fem_v.KG = KGL
@@ -60,9 +50,6 @@ function F_Obj(x, fem_v, fem_f)
     fem_v.CG = CGL
     fem_v.KD = KDL
     fem_v.UD = UDL
-    #fem_v.Ep = EpL
-    #fem_v.Ec = EcL
-    #fem_v.Ec = Pa #FIXME EMPRESTADO!!
 
     return fun, res
 end
@@ -70,38 +57,38 @@ end
 function Sensibilidade(x::Array{Float64,1}, valor_res::Array{Float64,1}, mult_res::Array{Float64,1},
                        rho::Float64, fem_v, fem_f, filt)
 
-    # Carrega constantes locais
+    # Carrega variáveis locais
     nelems = fem_f.nelems
     conect = fem_f.conect
     IDL = fem_f.ID
+    UEL = fem_v.UE
+    UDL = fem_v.UD
     FL  = fem_f.F
     wL  = fem_f.w
     M0L = fem_f.M0
+    K0L = fem_f.K0
     spL = fem_f.simp
-    alfaL = fem_f.alfa
     betaL = fem_f.beta
-    K0L   = fem_f.K0
-
-    # Carrega variáveis locais
-    KGL = fem_v.KG
-    MGL = fem_v.MG
-    KDL = fem_v.KD
-    UDL = fem_v.UD
-
-    #Pa = fem_v.Ec #FIXME EMPRESTADO!!
+    alfaL = fem_f.alfa
+    Est_0 = fem_f.Est_0
 
     # Inicializa a derivada interna
     dLi = zeros(Float64,nelems)
 
-    # Correção do mínimo p/derivadas
+    # Valor para correção da derivada
     corr_min = 1.0 - fem_f.vminimo
+
+    # Para flexibilidade dinamica
+    a = dot(FL,conj(UDL)) / abs(dot(FL,UDL))
+
+    # Derivada da restrição de Volume Normalizada (1.0-0.49), 58
+    dVdx = 1.0/fem_f.NX/fem_f.NY/0.51
 
     # Renomeia as restrições e multiplicadores
     resV = valor_res[1]
     mulV =  mult_res[1]
-
-    # Derivada da restrição de Volume Normalizada (1.0-0.49), 58
-    dVdx = 1.0/fem_f.NX/fem_f.NY/0.51
+    resE = valor_res[2]
+    mulE =  mult_res[2]
 
     # Varre os elementos
     for j=1:nelems
@@ -111,6 +98,7 @@ function Sensibilidade(x::Array{Float64,1}, valor_res::Array{Float64,1}, mult_re
 
         # Zera Ue, complexo para cálculos Harmônicos
         UDe = complex(zeros(Float64,8))
+        UEe = zeros(Float64,8)
 
         # Busca o U dos nós não restritos
         for k=1:4
@@ -118,6 +106,7 @@ function Sensibilidade(x::Array{Float64,1}, valor_res::Array{Float64,1}, mult_re
                 loc = IDL[nos[k],q]
                 if loc != 0
                     UDe[2*k-2+q] = UDL[loc]
+                    UEe[2*k-2+q] = UEL[loc]
                 end #loc
             end #q
         end #k
@@ -135,14 +124,14 @@ function Sensibilidade(x::Array{Float64,1}, valor_res::Array{Float64,1}, mult_re
         # Derivada da matriz dinamica
         dKDedx = dKedx*(1.0+im*wL*betaL) + dMedx*(-wL^2.0+im*wL*alfaL)
 
-        #derivada da potencia ativa 109/181
-        dfdx = -0.5*wL*real(UDe'*dKDedx*UDe)
+        # Derivada da rigidez estática
+        dEdx = real(-UEe'*dKedx*UEe)
 
-        # Correção com log
-        #dfdx = (10.0/(log(10.0)*Pa))*dfdx
+        # Derivada da flexibilidade dinamica 57
+        dfdx = real( -a*(UDe'*dKDedx*UDe) )
 
         # Derivada do LA
-        dLi[j] = dfdx + max(0.0, mulV + rho*resV)*dVdx
+        dLi[j] = dfdx + max(0.0, mulV + rho*resV)*dVdx + max(0.0, mulE + rho*resE)*dEdx
 
     end #j
 

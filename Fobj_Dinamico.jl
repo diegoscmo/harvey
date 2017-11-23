@@ -62,7 +62,10 @@ function Sensibilidade(x::Array{Float64,1}, valor_res::Array{Float64,1}, mult_re
     FL  = fem_f.F
     wL  = fem_f.w
     M0L = fem_f.M0
+    K0L = fem_f.K0
     spL = fem_f.simp
+    betaL = fem_f.beta
+    alfaL = fem_f.alfa
 
     # Inicializa a derivada interna
     dLi = zeros(Float64,nelems)
@@ -72,6 +75,13 @@ function Sensibilidade(x::Array{Float64,1}, valor_res::Array{Float64,1}, mult_re
 
     # Para flexibilidade dinamica
     a = dot(FL,conj(UDL)) / abs(dot(FL,UDL))
+
+    # Derivada da restrição de Volume Normalizada (1.0-0.49), 58
+    dVdx = 1.0/fem_f.NX/fem_f.NY/0.51
+
+    # Renomeia as restrições e multiplicadores
+    resV = valor_res[1]
+    mulV =  mult_res[1]
 
     # Varre os elementos
     for j=1:nelems
@@ -93,27 +103,20 @@ function Sensibilidade(x::Array{Float64,1}, valor_res::Array{Float64,1}, mult_re
         end #k
 
         # derivada das matrizes de rigidez e massa 109, corrigida
-        dKedx  = corr_min*spL*x[j]^(spL-1.0)*fem_f.K0
+        dKedx  = corr_min*spL*(x[j]^(spL-1.0))*K0L
 
         # Correção Olhoff & Du, 91 + Correção do valor minimo
         if x[j] >= 0.1
-            dMedx  = corr_min*M0L
+            dMedx = corr_min*M0L
         else
             dMedx = corr_min*(6.0*(6.0E5)*x[j]^5.0+7.0*(-5.0E6)*x[j]^6.0)*M0L
         end
 
         # Derivada da matriz dinamica
-        dKDedx = dKedx*(1.0+im*wL*fem_f.beta) + dMedx*(-wL^2.0+im*wL*fem_f.alfa)
-
-        # Derivada da restrição de Volume Normalizada (1.0-0.49), 58
-        dVdx = 1.0/fem_f.NX/fem_f.NY/0.51
-
-        # Renomeia as restrições e multiplicadores
-        resV = valor_res[1]
-        mulV =  mult_res[1]
+        dKDedx = dKedx*(1.0+im*wL*betaL) + dMedx*(-wL^2.0+im*wL*alfaL)
 
         # Derivada do LA - flexibilidade dinamica 57
-        dfdx = real( -a*(Ue'*dKDedx*Ue) )     #/valor_zero
+        dfdx = real( -a*(Ue'*dKDedx*Ue) )
         dLi[j] = dfdx + max(0.0, mulV + rho*resV)*dVdx
 
     end #j
