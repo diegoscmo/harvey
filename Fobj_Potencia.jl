@@ -44,9 +44,10 @@ function F_Obj(x, fem_v, fem_f)
     # Função objetivo, potencia
     #fun = 2.0*(alfaL*EcL + betaL*(wL^2.0)*EpL)
 
-    Pa = 0.5*wL*real(im*dot(FL,UDL))
+    fun = 0.5*wL*real(im*dot(FL,UDL))
+    #fun = 0.5*(wL^2.0)*real(conj(UDL)'*CGL*UDL)
+    #fun = 0.5*wL*real(im*conj(UDL'*KDL)*UDL)
 
-    fun = Pa
     #fun = 100.0 + 10.0*log10(Pa)
     #real(0.5*(wL^2.0)*(conj(UDL)'*CGL*UDL))
 
@@ -129,14 +130,14 @@ function Sensibilidade(x::Array{Float64,1}, valor_res::Array{Float64,1}, mult_re
         if x[j] >= 0.1
             dMedx = corr_min*M0L
         else
-            dMedx = corr_min*(6.0*(6.0E5)*x[j]^5.0+7.0*(-5.0E6)*x[j]^6.0)*M0L
+            dMedx = corr_min*(6.0*(6.0E5)*(x[j]^5.0) + 7.0*(-5.0E6)*(x[j]^6.0))*M0L
         end
 
         # Derivada da matriz dinamica
         dKDedx = dKedx*(1.0+im*wL*betaL) + dMedx*(-wL^2.0+im*wL*alfaL)
 
-        #derivada da potencia ativa 109/181
-        dfdx = -0.5*wL*real(UDe'*dKDedx*UDe)
+        #derivada da potencia ativa 109/181 FIXME
+        dfdx = -0.5*wL*real(transpose(UDe)*dKDedx*UDe*im)
 
         # Correção com log
         #dfdx = (10.0/(log(10.0)*Pa))*dfdx

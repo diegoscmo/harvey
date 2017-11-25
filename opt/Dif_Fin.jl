@@ -15,7 +15,7 @@ function Sensibilidade(x::Array{Float64,1}, valor_res::Array{Float64,1}, mult_re
     # Diferenças finitas à frente
 
         # Valor da funcao Lagrangiana no ponto x
-        L0 = F_Lagrangiana(x, mult_res, rho, fem_v, fem_f)
+        #L0 = F_Lagrangiana(x, mult_res, rho, fem_v, fem_f)
 
         # Gradiente em cada direção
         dL = zeros(size(x,1))

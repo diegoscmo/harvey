@@ -78,15 +78,6 @@ function BFGS(x::Array{Float64,1}, valor_res, mult_res::Array{Float64,1},rho::Fl
             break
         end
 
-        fmesh = string("asens.txt")
-        rm(fmesh)
-        saida  = open(fmesh,"a")
-        for z = 1:numvar
-            println(saida,dL[z])
-        end
-        close(saida)
-        error()
-
         # Line search nesta direcao
         alpha,count = LineSearch(x, mult_res, rho, dL, dir, xl, xu, tol_int, count, fem_v, fem_f, filt, lsearch, step_min)
 

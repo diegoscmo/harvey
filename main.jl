@@ -83,15 +83,15 @@ function main()
 
     # Parâmetros do Lagrangiano Aumentado
     max_ext     = 150       # Máximo de iteracoes externas
-    max_int     = 50       # Máximo de iterações internas
+    max_int     = 200       # Máximo de iterações internas
     tol_ext     = 1E-6      # Tolerância do laço externo
     tol_int     = 1E-6      # Tolerância do laço interno
     rho_ini     = 0.25      # Valor inicial de rho
-    rho_max     = 0.6       # Valor maximo de rho
+    rho_max     = 0.25      # Valor maximo de rho
     mult_max    = 10.0      # Valor maximo dos multiplicadores
 
     # Métodos de busca a utilizar no laço interno
-    descent     = "BFGS"    # Steep, BFGS, FR, DFP
+    descent     = "Steep"    # Steep, BFGS, FR, DFP
     lsearch     = "Equal"   # Equal, #FIXME falta corrigir Golden e Back
     step_min    = 1E-12     # Passo mínimo do line search
     nbreaker    = 50        # Número máximo de passos mínimos
@@ -166,7 +166,7 @@ function main()
 
     # Monta CG e KD (Harmônica)
     CG = alfa*MG + beta*KG
-    KD = KG + w*im*CG - w^2.0*MG
+    KD = KG + w*im*CG - (w^2.0)*MG
 
     # Resolve o sistema pela primeira vez
     UE = vec(lufact(KG)\F);

@@ -5,6 +5,7 @@
 function Imprime_Atual(x::Array{Float64,1}, i_ext::Int64, n_int::Int64, count::Int64, dts::String, valor_fun::Float64,
                       rho::Float64, mult_res::Array{Float64,1}, valor_res::Array{Float64,1}, nelems::Int64, ndL::Float64)
 
+    if dts !=  "OFF"
     # Abre os arquivos
     fmesh = string("z",dts,".pos")
     file1 = string("z",dts,".txt")
@@ -12,7 +13,7 @@ function Imprime_Atual(x::Array{Float64,1}, i_ext::Int64, n_int::Int64, count::I
 
     saida  = open(file1,"a")
     saida2 = open(file2,"a")
-
+    end
     vol = mean(x)
 
     t = 0.0
@@ -61,27 +62,31 @@ end
 function Imprime_0(x, dts, valor_fun, rho, mult_res, valor_res, nelems, nnos,
     conect, coord, max_ext, max_int, tol_ext, tol_int, filtro, raiof, simp, f, descent, lsearch)
 
+    if dts !=  "OFF"
     # Abre os arquivos
     fmesh = string("z",dts,".pos")
     file1  = string("z",dts,".txt")
 
     saida  = open(file1,"a")
-
-    # Imprime malha no gmsh
-    Inicializa_Malha_Gmsh(fmesh, nnos, nelems, conect, coord, 2)
+end
 
     println("\n  LagAug:: ",dts," | ",descent," | ",lsearch)
     println("\n  Nelems:: ",nelems," | Iter:: ",max_ext,"/",max_int," | Tol:: ",tol_ext,"/",tol_int)
     println("\n  Filtro:: ",filtro," | raiof:: ",raiof, " | pSIMP:: ",simp," | freq:: ", f)
 
     if dts !=  "OFF"
+
+        # Imprime malha no gmsh
+        Inicializa_Malha_Gmsh(fmesh, nnos, nelems, conect, coord, 2)
+
     println(saida,"\n  LagAug:: ",dts," | ",descent," | ",lsearch)
     println(saida,"\n  Nelems:: ",nelems," | Iter:: ",max_ext,"/",max_int," | Tol:: ",tol_ext,"/",tol_int)
     println(saida,"\n  Filtro:: ",filtro," | raiof:: ",raiof, " | pSIMP:: ",simp," | freq:: ", f)
 
     Imprime_Atual(x, 0, 0, 0, dts, valor_fun, rho, mult_res, valor_res, nelems, 0.0)
+close(saida)
     end
-    close(saida)
+
 
 
 
@@ -90,10 +95,12 @@ end
 function Imprime_F(dts, n_int, count)
 
     # Abre os arquivos
+    if dts !=  "OFF"
     file1  = string("z",dts,".txt")
 
     saida  = open(file1,"a")
 
+end
     t = toq()/60.0;
     tic();
 
@@ -104,6 +111,7 @@ function Imprime_F(dts, n_int, count)
     @printf(saida,"  \t\tpassos internos: %d | T: %.3f mins | evals: %d\n",n_int,t,count)
     @printf(saida,"\tFIM!\n")
     end
-
+    if dts !=  "OFF"
     close(saida)
+end
 end
