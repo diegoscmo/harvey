@@ -1,10 +1,6 @@
 function Global_KM(densidades::Array{Float64,1}, nelems::Int64, ijk::Array{Int64,2},
-                   ID::Array{Int64,2},
-                   K0::Array{Float64,2},
-                   #K0::StaticArrays.SArray{Tuple{8,8},Float64,2,64},
-                   M0::Array{Float64,2},
-                   #M0::StaticArrays.SArray{Tuple{8,8},Float64,2,64},
-                     simp::Float64, vminimo::Float64)
+                   ID::Array{Int64,2}, K0::StaticArrays.SArray{Tuple{8,8},Float64,2,64},
+                    M0::StaticArrays.SArray{Tuple{8,8},Float64,2,64}, simp::Float64, vminimo::Float64)
 
     # Corrige os fatores densidade para a massa (Olhoff e Du)
     massadens = copy(densidades)
@@ -23,10 +19,10 @@ function Global_KM(densidades::Array{Float64,1}, nelems::Int64, ijk::Array{Int64
      vsuper = 1.0 - vminimo
 
      # Inicializa vetores
-     I = Array{Int64}(uninitialized,8*8*nelems)
-     J = Array{Int64}(uninitialized,8*8*nelems)
-     V = Array{Float64}(uninitialized,8*8*nelems)
-     W = Array{Float64}(uninitialized,8*8*nelems)
+     I = zeros(Int64,8*8*nelems)
+     J = zeros(Int64,8*8*nelems)
+     V = zeros(Float64,8*8*nelems)
+     W = zeros(Float64,8*8*nelems)
 
      for el = 1:nelems
         # rotina para determinacao dos vetores para montagem da matriz esparsa
@@ -40,24 +36,18 @@ function Global_KM(densidades::Array{Float64,1}, nelems::Int64, ijk::Array{Int64
                         @inbounds @simd for j = 1: length(glg)
                                   glgj =  glg[j]
                                   gllj =  gll[j]
-                                  # Monta só a parte superior
-                                  #if glgj>=glgi
-                                     I[contador] = glgi
-                                     J[contador] = glgj
+                                  I[contador] = glgi
+                                  J[contador] = glgj
 
-                                     # Corrige o valor mínimo na montagem da matriz
-       	                             V[contador] = (vminimo + kfator*vsuper)*K0[glli,gllj]
-                                     W[contador] = (vminimo + mfator*vsuper)*M0[glli,gllj]
-                                     contador = contador + 1
-                                #end # if U
+                                  # Corrige o valor mínimo na montagem da matriz 
+       	                          V[contador] = (vminimo + kfator*vsuper)*K0[glli,gllj]
+                                  W[contador] = (vminimo + mfator*vsuper)*M0[glli,gllj]
+                                  contador = contador + 1
                         end #j
        end #i
     end #e
 
     contador = contador - 1
-
-    #KG = Symmetric(sparse(I[1:contador],J[1:contador],V[1:contador]))
-    #MG = Symmetric(sparse(I[1:contador],J[1:contador],W[1:contador]))
 
     KG = sparse(I[1:contador],J[1:contador],V[1:contador])
     MG = sparse(I[1:contador],J[1:contador],W[1:contador])
@@ -89,6 +79,8 @@ function Global_F(ID::Array{Int64,2}, nos_forcas::Array{Float64,2}, ngl_efetivos
     end
 return F
 end
+
+
 
 
 # Rotina que expande um vetor global compactado (sem os gls restritos)

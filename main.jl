@@ -3,7 +3,7 @@
 ################################################################################
 
 # Copiar para o console para executar:
-# cd(ENV["HARVEY"]);
+# cd(ENV["HARVEY"]); using StaticArrays;
 # include("main.jl"); main();
 
 # Carrega os arquivos com as rotinas de elementos finitos
@@ -11,53 +11,107 @@ include("fem\\Gera_Malha.jl")       # GeraMalha, gl_livres_elemento
 include("fem\\Quad4.jl")            # Kquad4, Kquad4_I
 include("fem\\Monta_Global.jl")     # Global, Expande_Vetor
 include("fem\\Gmsh.jl")             # Funções GMSH
-include("fem\\Harmonica.jl")         # Cálculo Harmônico
 
-# Carrega os arquivos com métodos as rotinas para otimização
-include("opt\\Steepest.jl")         # Método de Descida, Steepest
-include("opt\\Wall_Search.jl")      # Procura em linha, Wall_Search
-include("opt\\Filtros.jl")          # Filtros de densidades e sensibilidades
-include("opt\\Saida.jl")            # Impressão das saídas em arquivo e console
+# Carrega os arquivos com as rotinas para otimização
+include("opt\\Opt_Methods.jl")          # Método de Descida
 
 # Carrega cálculo da Fobj, Lagrangiana e derivadas, selecionar um
-#include("fobj\\1_Estatico.jl")
-#include("fobj\\2_Dinamico.jl")
-#include("fobj\\3_Din_R-Est.jl")
-#include("fobj\\4_Din_A-Est.jl")
-#include("fobj\\5_Potencia.jl")
-#include("fobj\\6_Pot_R-Est.jl")
-include("fobj\\7_Pot_A-Est.jl")
+#include("Fobj_Estatico.jl")
+#include("Fobj_Dinamico.jl")
+#include("Fobj_Din_R-Est.jl")
+#include("Fobj_Din_Est.jl")
+include("Fobj_Potencia.jl")
 
+#Caso queira validar com diferenças finitas...
+#include("opt\\Dif_Fin.jl")
+
+# Etc
+include("Filtros.jl")               # Filtros de densidades e sensibilidades
+include("Saida.jl")                 # Impressão das saídas em arquivo e console
+
+# Gera tipo com as variáveis de finitos que podem mudar
+mutable struct finitos_var
+    KG::SparseMatrixCSC{Float64,Int64}
+    CG::SparseMatrixCSC{Float64,Int64}
+    MG::SparseMatrixCSC{Float64,Int64}
+    KD::SparseMatrixCSC{Complex{Float64},Int64}
+    UE::Array{Float64,1}
+    UD::Array{Complex{Float64},1}
+    Ep::Float64
+    Ec::Float64
+end
+
+# Gera tipo com as variáveis de finitos fixas
+struct finitos_fix
+     F::Array{Float64,1}
+    K0::StaticArrays.SArray{Tuple{8,8},Float64,2,64}
+    M0::StaticArrays.SArray{Tuple{8,8},Float64,2,64}
+    simp::Float64
+    nelems::Int64
+    conect::Array{Int64,2}
+    NX::Int64
+    NY::Int64
+    ID::Array{Int64,2}
+    w::Float64
+    alfa::Float64
+    beta::Float64
+    vminimo::Float64
+    nbreaker::Int64
+    Amult::Float64
+    Est_0::Float64
+    Din_0::Float64
+end
+
+# Gera tipo com informações do filtro
+struct filtros
+      raiof::Float64;
+       vizi::Array{Int64,2}
+       nviz::Array{Int64,1}
+       dviz::Array{Float64,2}
+     filtro::String
+end
 
 # Rotina principal
 function main()
 
     # Nome do Arquivo ou data de execução("OFF desliga")
-    #dts = "1_Est_1800"
-    #dts = "3_Din_R-Est_1800_f180-R100"
-    #dts = "4_Din_A-Est_1800_f180-A099"
-    #dts = "5_Pot_1800_f180_alfa1"
-    #dts = "6_Pot_R-Est_1800_f600_Y100"
-    dts  = "7_Pot_A-Est_1800_f750_A099"
+    dts = ""
+    if dts == ""
+        dts = Dates.format(Dates.now(),"YYYY-mm-dd-HH-MM-SS")
+    end
+    tic();
 
     # Parâmetros do Lagrangiano Aumentado
-    max_ext     = 100       # Máximo de iteracoes externas
-    max_int     = 300       # Máximo de iterações internas
+    max_ext     = 150       # Máximo de iteracoes externas
+    max_int     = 200       # Máximo de iterações internas
     tol_ext     = 1E-6      # Tolerância do laço externo
     tol_int     = 1E-6      # Tolerância do laço interno
-    rho_ini     = 1.00      # Valor inicial de rho
-    rho_max     = 3.00      # Valor maximo de rho
+    rho_ini     = 0.25      # Valor inicial de rho
+    rho_max     = 0.25      # Valor maximo de rho
     mult_max    = 10.0      # Valor maximo dos multiplicadores
+
+    # Métodos de busca a utilizar no laço interno
+    descent     = "Steep"    # Steep, BFGS, FR, DFP
+    lsearch     = "Equal"   # Equal, #FIXME falta corrigir Golden e Back
+    step_min    = 1E-12     # Passo mínimo do line search
+    nbreaker    = 50        # Número máximo de passos mínimos
 
     # Parâmetros da topológica
     dens_ini    = 0.49      # Volume/Pseudo-densidades iniciais
-    SP          = 3.00      # Parametro p do SIMP
+    simp        = 3.0       # Parametro p do SIMP
     raiof       = 0.031     # Tamanho do filtro [m]
-    vmin        = 0.001     # 1%
+    filtro      = "Dens"    # Filtros: (Off ou Dens)
+    vminimo     = 0.001     # Fração mínima da Elast/Densidade
+    Amult       = 0.25      # Peso da Harmônica na Fobj, para Din_Est
+
+    # Parâmetros do problema Harmônico
+    f    = 100.0      # Frequência
+    alfa = 0.0        # Amortecimento proporcional de Rayleigh
+    beta = 1E-8
 
     # Parâmetros do problema de FEM, 60x30 = 1800
-    NX = 60              # Nr. de elementos em X
-    NY = 30              # Nr. de elementos em Y
+    NX = 40              # Nr. de elementos em X
+    NY = 20              # Nr. de elementos em Y
 
     # Definição geométrica do problema (retângulo):
     LX = 1.0       # Comprimento em X
@@ -67,7 +121,7 @@ function main()
     young   = 210E9     # Módulo de Young
     poisson = 0.0       # Coeficiente de Poisson (0.0 > viga)
     esp     = 1.0       # Espessura do retângulo
-    p_dens  = 7860.0    # Densidade
+    rho     = 7860.0    # Densidade
 
     # Restrições de deslocamento (apoios):
     #        [ ponto_X_inicial ponto_Y_inicial ponto_X_final ponto_Y_final direção (X=1 Y=2)]
@@ -75,41 +129,70 @@ function main()
                 0.0             0.0             0.0           LY           2       ]
 
     # Carregamentos:
-    #               [ ponto_X        ponto_Y         força           dir (X=1 Y=2)]
+    #        [ ponto_X         ponto_Y         força         direção (X=1 Y=2)]
     forcas = [ LX              LY/2.0          -9000.0         2 ]
 
     # Nós e elementos
-    nnos = (NX+1)*(NY+1)             # Nr. de nós
-    nel  = NX*NY                     # Nr. de elementos
-
-    # Gera a malha
-    coord, ijk, nos_f, ID, gdll = GeraMalha(nnos, nel, LX, LY, NX, NY, presos, forcas)
-
-    # Gera array com as forças
-    F =  Global_F(ID, nos_f, gdll)
-
-    # Gera a matrizes de rigidez e massa de um elemento e transforma para StaticArrays
-    K0 = Kquad4_I(1, coord, ijk, young, poisson, esp)[1]
-    M0 = Mquad4(1, coord, ijk, esp, p_dens)
-
-    # Prepara os vizinhos para filtros 63
-    vizi, nviz, dviz = Proc_Vizinhos(nel, coord, ijk, raiof)
+    nnos    = (NX+1)*(NY+1)             # Nr. de nós
+    nelems  = NX*NY                     # Nr. de elementos
 
     # Pseudo-densidades para a montagem global com o SIMP
-    x = dens_ini*ones(nel)
+    x  = dens_ini*ones(nelems)
+    xl = zeros(nelems)
+    xu =  ones(nelems)
 
-    # Adquire valores iniciais se aplicável
-    valor_0 = F_Obj(x, 0.0, [0.0], 0, nel, ijk, ID, K0, M0, SP, vmin,
-                                                F, NX, NY, vizi, nviz, dviz, raiof, [0.0])
+    # Gera a malha
+    coord, conect, nos_forcas, ID, gdl_livres =
+                         GeraMalha(nnos, nelems, LX, LY, NX, NY, presos, forcas)
 
-    # Inicializa vetores e calcula para primeiro display
-    valor_fun, valor_res = F_Obj(x, 0.0, [0.0], 1, nel, ijk, ID, K0, M0, SP, vmin,
-                                                F, NX, NY, vizi, nviz, dviz, raiof, valor_0)
-    numres = size(valor_res,1)
-    mult_res  = zeros(Float64,numres)
+    # Gera a matrizes de rigidez e massa de um elemento finito - malha toda igual
+    (K0n,) = Kquad4_I(1, coord, conect, young, poisson, esp)
+    M0n    = Mquad4(1, coord, conect, esp, rho)
+
+    # Transforma para StaticArrays
+    K0 = SMatrix{8,8}(K0n)
+    M0 = SMatrix{8,8}(M0n)
+
+    # Prepara os vizinhos para filtros 63
+    vizi,nviz,dviz = Proc_Vizinhos(nelems, coord, conect, raiof)
+    filt           = filtros(raiof, vizi, nviz, dviz, filtro)
+
+    # Correção de Hz para rad/s
+    w = 2.0*pi*f
+
+    # Monta matrizes de rigidez e massa Globais, aqui é aplicado o SIMP e  CORREÇÔES OLHOF&DU!
+    KG,MG = Global_KM(x, nelems, conect, ID, K0, M0, simp, vminimo)
+    F     =  Global_F(ID, nos_forcas, gdl_livres)
+
+    # Monta CG e KD (Harmônica)
+    CG = alfa*MG + beta*KG
+    KD = KG + w*im*CG - (w^2.0)*MG
+
+    # Resolve o sistema pela primeira vez
+    UE = vec(lufact(KG)\F);
+    UD = vec(lufact(KD)\F);
+
+    # Resultado da primeira análise
+    Est_0 = abs(dot(F,UE))
+    Din_0 = abs(dot(F,UD))
+
+    # Energia Potencial e Cinética
+    Ep = real(UD'*MG*UD)
+    Ec = real(UD'*KG*UD)
+
+    # Agrupa nos tipos
+    fem_v = finitos_var(KG, CG, MG, KD, UE, UD, Ep, Ec)
+    fem_f = finitos_fix(F, K0, M0, simp, nelems, conect, NX, NY, ID, w, alfa, beta, vminimo, nbreaker, Amult, Est_0, Din_0)
+
+    # Obtem os valores de f e g em x0 para o calculo de c0
+    valor_fun, valor_res = F_Obj(x, fem_v, fem_f)
+
+    # Inicializa multiplicadores de Lagrange (u)
+    numres   = size(valor_res, 1)
+    mult_res = zeros(numres)
 
     # Define fator de penalização inicial (c)
-    rho = max.(1E-2,min(rho_max,(2.0*abs(valor_fun)/norm(max.(valor_res,0.))^2.)))
+    rho = max.(1E-6,min(rho_max,(2.0*abs(valor_fun)/norm(max.(valor_res,0.))^2.)))
 
     # Usa rho_min se a função começar não restrita
     if rho == rho_max
@@ -119,20 +202,24 @@ function main()
     # E calcula o criterio de atualizacao do c
     crho_ant = max.(0.,norm(max.(valor_res, -mult_res/rho)))
 
+    # Inicializa o contador de avaliacoes da F_Obj e loops internos
+    count = 1
+    n_int = 0
+
     # Prepara o plot e primeira saída
-    Imprime_0(x, rho, mult_res, valor_fun, valor_res, max_ext, max_int, tol_ext,
-                                      tol_int, dts, nnos, nel, ijk, coord)
+    Imprime_0(x, dts, valor_fun, rho, mult_res, valor_res, nelems, nnos,
+                      conect, coord, max_ext, max_int, tol_ext, tol_int,
+                      filtro, raiof, simp, f, descent, lsearch)
 
     # Inicia o laço externo do lagrangiano aumentado
     for i_ext=1:max_ext
 
         # Soluciona o problema interno (e salva a derivada)
-        x, dL = Steepest(x, rho, mult_res, max_int, tol_int, nel, ijk, ID, K0, M0,
-                                 SP, vmin, F, NX, NY, vizi, nviz, dviz, raiof, dts, valor_0)
+        x, dL, count, n_int = Descent(x, valor_res, mult_res, rho, xl, xu,
+                                max_int, tol_int, count, fem_v, fem_f, filt, descent, lsearch, step_min)
 
         # Verifica novos valores da função e restrições
-        valor_fun, valor_res = F_Obj(x, 0.0, [0.0], 1, nel, ijk, ID, K0, M0, SP,
-                                        vmin, F, NX, NY, vizi, nviz, dviz, raiof, valor_0)
+        valor_fun, valor_res = F_Obj(x, fem_v, fem_f)
 
         # Atualiza o valor o multiplicador das restricoes (u)
         mult_res = min.(mult_max, max.(rho*valor_res + mult_res, 0.0))
@@ -143,11 +230,14 @@ function main()
             rho = min.(1.1*rho, rho_max)
         end # if
 
+        # Norma de dL para display e saída
+        ndL = norm(dL)
+
         # Imprime resultado atual e plota saida para o gmsh
-        Imprime_Ext(x, rho, mult_res, valor_fun, valor_res, i_ext, dts, nel)
+        Imprime_Atual(x, i_ext, n_int, count, dts, valor_fun, rho, mult_res, valor_res, nelems, ndL)
 
         # Verifica os criterios:
-        if  norm(dL)                   <= tol_ext &&  # Condicao de gradiente
+        if  ndL                        <= tol_ext &&  # Condicao de gradiente
             norm(max.(valor_res, 0.0)) <= tol_ext &&  # Condicao de viabilidade
             norm(valor_res'*mult_res)  <  tol_ext     # Cond. de complementariedade
             break
@@ -155,11 +245,6 @@ function main()
 
     end # for i_ext
 
-    @printf("\n\tAnálise Harmônica...")
-    alfa = 0.0
-    beta = 1E-8
-    Harmonica(dts, 0.0, 5.0, 1000.0, alfa, beta, nel, ijk, ID, K0, M0, SP, vmin, F,
-                    vizi, nviz, dviz, raiof)
-
-    @printf(" OK!\n")
+    # Display Final
+    Imprime_F(dts, n_int, count)
 end

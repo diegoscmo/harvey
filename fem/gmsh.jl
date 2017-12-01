@@ -4,6 +4,7 @@
 #
 function Inicializa_Malha_Gmsh(nome_arquivo::String,nnos,nelems,conec,coord,dimensao=2)
 
+
     # Abre o arquivo para escrita
     saida = open(nome_arquivo,"w")
 
@@ -125,7 +126,7 @@ function Adiciona_Vista_Escalar_Gmsh(nome_arquivo::String,nome_vista::String,nel
     println(saida,"1")
     println(saida,nelems)
     for i=1:nelems
-        println(saida,i," ",round(escalares[i],15))
+        println(saida,i," ",escalares[i])
     end
     println(saida,"\$EndElementData")
 
@@ -154,7 +155,7 @@ function Adiciona_Vista_Nodal_Vetorial_Gmsh(nnos::Int64,nome_arquivo::String,nom
 
 
     # Verifica se a dimensao esta correta
-    dim_total = 2*nnos
+    const dim_total = 2*nnos
     if size(vetor,1)!= dim_total
         error("ERROR::Adiciona_Vista_Nodal_Vetorial_Gmsh:: vetor com escalares deve ter dimensao $dim_total")
     end
@@ -171,9 +172,9 @@ function Adiciona_Vista_Nodal_Vetorial_Gmsh(nnos::Int64,nome_arquivo::String,nom
     println(saida,"3")
     println(saida,nnos)
     for no=1:nnos
-        pos1 = 2*(no-1)+1; val1 = vetor[pos1]
-        pos2 = 2*(no-1)+2; val2 = vetor[pos2]
-        val3 = 0.0
+        const pos1 = 2*(no-1)+1; const val1 = vetor[pos1]
+        const pos2 = 2*(no-1)+2; const val2 = vetor[pos2]
+        const val3 = 0.0
         println(saida,no," ",val1," ",val2," ",val3 )
     end
     println(saida,"\$EndNodeData")
@@ -240,7 +241,7 @@ function Mapeia_Nos_ConsistenteQuad(tensoes)
 
     # Esta matriz foi obtida no maxima e os cálculos estão
     # na pasta de documentação.
-    invA  = [1.866025403784438 -0.5 0.1339745962155612 -0.5;
+    const invA  = [1.866025403784438 -0.5 0.1339745962155612 -0.5;
                   -0.5 1.866025403784438 -0.5 0.1339745962155612;
                    0.1339745962155612 -0.5 1.866025403784438 -0.5;
                   -0.5 0.1339745962155612 -0.5 1.866025403784438]
