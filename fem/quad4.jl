@@ -3,9 +3,9 @@ function Kquad4(elem::Int64, coordx::Array{Float64,2}, conect::Array{Int64,2},
     elast::Float64, poiss::Float64, espess::Float64)
 
     # Define os arrays locais
-    B  = zeros(Float64,3,8)
-    nos = zeros(Float64,2,4);
-    K = zeros(Float64,8,8);
+    B  = Array{Float64}(uninitialized,3,8)
+    nos = Array{Float64}(uninitialized,2,4)
+    K = Array{Float64}(uninitialized,8,8)
     DJ = 0.0
 
     # Determina as coordxenadas dos nós
@@ -60,10 +60,10 @@ end
 function Bquad4(r::Float64,s::Float64,nos::Array{Float64,2})
 
     # Criando matrizes necessarias
-    J    = Array{Float64}(2,2)
-    invJ = Array{Float64}(2,2)
-    DN   = Array{Float64}(2,4)
-    B    = Array{Float64}(3,8)
+    J    = Array{Float64}(uninitialized,2,2)
+    invJ = Array{Float64}(uninitialized,2,2)
+    DN   = Array{Float64}(uninitialized,2,4)
+    B    = Array{Float64}(uninitialized,3,8)
 
     #DN eh a matriz com as derivadas da funcao de forma em relacao a r e s
     DN[1,1] = (-1.0+s)/4.0
@@ -88,6 +88,8 @@ function Bquad4(r::Float64,s::Float64,nos::Array{Float64,2})
     Baux = invJ*DN
     for i=1:2:2*size(Baux,2)
         B[1,i]   = Baux[1,Int((i+1)/2)]
+        B[1,i+1] = 0.0
+        B[2,i]   = 0.0
         B[2,i+1] = Baux[2,Int((i+1)/2)]
         B[3,i]   = Baux[2,Int((i+1)/2)]
         B[3,i+1] = Baux[1,Int((i+1)/2)]
@@ -222,10 +224,10 @@ function Kquad4_I(elem::Int64, coordx::Array{Float64,2}, conect::Array{Int64,2},
     elast::Float64, poiss::Float64, espess::Float64)
 
     # Define os arrays locais
-    B  = zeros(Float64,3,12)
-    nos = zeros(Float64,2,4);
-    K   = zeros(Float64,8,8)
-    K_I = zeros(Float64,12,12);
+    B    = Array{Float64}(uninitialized,3,12)
+    nos  = Array{Float64}(uninitialized,2,4)
+    K    = Array{Float64}(uninitialized,8,8)
+    K_I  = Array{Float64}(uninitialized,12,12)
     DJ = 0.0
 
     # Determina as coordxenadas dos nós
@@ -269,10 +271,10 @@ end #Kquad4
 function Bquad4_I(r::Float64,s::Float64,nos::Array{Float64,2})
 
     # Criando matrizes necessarias
-    J    = Array{Float64}(2,2)
-    invJ = Array{Float64}(2,2)
-    DN   = Array{Float64}(2,6)
-    B    = Array{Float64}(3,12)
+    J    = Array{Float64}(uninitialized,2,2)
+    invJ = Array{Float64}(uninitialized,2,2)
+    DN   = Array{Float64}(uninitialized,2,6)
+    B    = Array{Float64}(uninitialized,3,12)
 
     #DN eh a matriz com as derivadas da funcao de forma em relacao a r e s
     DN[1,1] = (-1.0+s)/4.0
@@ -302,6 +304,8 @@ function Bquad4_I(r::Float64,s::Float64,nos::Array{Float64,2})
     Baux = invJ*DN
     for i=1:size(DN,2)
         B[1,2*i-1]  = Baux[1,i]
+        B[1,2*i]    = 0.0
+        B[2,2*i-1]  = 0.0
         B[2,2*i]    = Baux[2,i]
         B[3,2*i-1]  = Baux[2,i]
         B[3,2*i]    = Baux[1,i]

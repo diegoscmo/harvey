@@ -160,14 +160,14 @@ end
 function gl_livres_elemento(elemento::Int64,ijk::Array{Int64,2},ID::Array{Int64,2})
 
     # graus de liberdade locais
-    const gll = zeros(Int64,8)
+    gll = zeros(Int64,8)
 
     # graus de liberdade globais
-    const glg = zeros(Int64,8)
+    glg = zeros(Int64,8)
 
 
-    const contador_local::Int64 = 1
-    const contador_global::Int64 = 1
+    contador_local::Int64 = 1
+    contador_global::Int64 = 1
     @inbounds for no in ijk[elemento,:]
        @inbounds  for j = 1:2
             gl = ID[no,j]
