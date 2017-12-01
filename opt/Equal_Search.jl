@@ -1,38 +1,43 @@
-function Equal_Search(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Float64,
-   dir::Array{Float64,1}, xl::Array{Float64,1}, xu::Array{Float64,1}, tol_int::Float64, count::Int64,
-    fem_v, fem_f, filt, step_min::Float64)
+function Equal_Search(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1},
+                      dir::Array{Float64,1}, tol_int::Float64, minimo::Float64,
+                      nel::Int64, ijk::Array{Int64,2}, ID::Array{Int64,2},
+                      K0::Array{Float64,2},
+                      #K0::StaticArrays.SArray{Tuple{8,8},Float64,2,64},
+                      M0::Array{Float64,2},
+                      #M0::StaticArrays.SArray{Tuple{8,8},Float64,2,64},
+                      SP::Float64, vmin::Float64, F::Array{Float64,1}, NX::Int64,
+                      NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1},
+                      dviz::Array{Float64,2}, raiof::Float64)
 
-    # Define um valor minimo de passo
-    const minimo = step_min
     # E o passo inicial
-    const delta = 0.1
+    delta = 0.1
 
     # Aoca as variaveis da rotina
-    const alfa = 0.0
-    const al = 0.0
-    const aa = 0.0
-    const La = 0.0
-    const au = 0.0
-    const al = 0.0
-    const Ll = 0.0
+    alfa = 0.0
+    al = 0.0
+    aa = 0.0
+    La = 0.0
+    au = 0.0
+    al = 0.0
+    Ll = 0.0
 
     # Bloqueio do alpha
     alpha = 1e10
     a_check = alpha
     for j=1:size(x,1)
         if dir[j]<0.0
-            a_check = (xl[j]-x[j])/dir[j]
+            a_check = (0.0-x[j])/dir[j]
         end
         if dir[j]>0.0
-            a_check = (xu[j]-x[j])/dir[j]
+            a_check = (1.0-x[j])/dir[j]
         end
         alpha = min(a_check, alpha)
     end
 
     # Calcula o valor do custo no ponto atual
-    xf = Aplica_Filtro(x, filt)
-    Ll = F_Lagrangiana(xf, mult_res, rho, fem_v, fem_f)#, valor_zero)
-    count += 1
+    Ll = F_Obj(x, rho, mult_res, 2, nel, ijk, ID, K0, M0, SP, vmin,
+                                 F, NX, NY, vizi, nviz, dviz, raiof)
+    conta_line = 1
 
     # Bracketing
     while true
@@ -40,15 +45,15 @@ function Equal_Search(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Floa
         xn = x + aa*dir
 
         # Calcula funcao lagrangiana nesta nova posicao
-        xf = Aplica_Filtro(xn, filt)
-        La = F_Lagrangiana(xf, mult_res, rho, fem_v, fem_f)#, valor_zero)
-        count += 1
+        La = F_Obj(xn, rho, mult_res, 2, nel,  ijk, ID, K0, M0, SP, vmin,
+                                       F, NX, NY, vizi, nviz, dviz, raiof)
+        conta_line += 1
 
         # Se nao minimizar, diminui o passo delta
         if La>Ll
             delta = delta/10.
             if delta < minimo
-                return minimo,count
+                return minimo,conta_line
             end
         # Se minimizar, definiu o bracketing superior
         else
@@ -63,13 +68,13 @@ function Equal_Search(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Floa
 
         # Se passar do limite de alpha, retorna alpha
         if au>alpha
-            return alpha,count
+            return alpha,conta_line
         end
 
         # Calcula funcao lagrangiana nesta nova posicao
-        xf = Aplica_Filtro(xn, filt)
-        Lu = F_Lagrangiana(xf, mult_res, rho, fem_v, fem_f)#, valor_zero)
-        count += 1
+        Lu = F_Obj(xn, rho, mult_res, 2, nel, ijk, ID, K0, M0, SP, vmin,
+                                      F, NX, NY, vizi, nviz, dviz, raiof)
+        conta_line += 1
 
         # Aproxima o search pelo brackeing inferior
         if La>Lu
@@ -98,12 +103,13 @@ function Equal_Search(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Floa
 
             # Sai se passar do bloqueio
             if au>alpha
-                return alpha,count
+                return alpha,conta_line
             end
 
-            xf = Aplica_Filtro(xn, filt)
-            Lu = F_Lagrangiana(xf, mult_res, rho, fem_v, fem_f)#, valor_zero)
-            count += 1
+            Lu = F_Obj(xn, rho, mult_res, 2, nel, ijk, ID, K0, M0, SP, vmin,
+                                          F, NX, NY, vizi, nviz, dviz, raiof)
+            conta_line += 1
+
             if La>Lu
                 al = aa
                 aa = au
@@ -117,6 +123,6 @@ function Equal_Search(x::Array{Float64,1}, mult_res::Array{Float64,1}, rho::Floa
 
     alpha = (au+al)/2.0
 
-    return alpha,count
+    return alpha, conta_line
 
 end
