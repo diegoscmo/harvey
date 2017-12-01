@@ -1,42 +1,43 @@
-function Steepest(x::Array{Float64,1}, valor_res, mult_res::Array{Float64,1},rho::Float64,xl::Array{Float64,1},
-                  xu::Array{Float64,1}, max_int::Int64, tol_int::Float64, count::Int64,
-                  fem_v, fem_f, filt, lsearch::String, step_min::Float64) #,valor_zero)
+function Steepest(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1},
+                    max_int::Int64, tol_int::Float64, nel::Int64, ijk::Array{Int64,2},
+                    ID::Array{Int64,2},
+                    K0::Array{Float64,2},
+                    M0::Array{Float64,2},
+                    SP::Float64, vmin::Float64,
+                    F::Array{Float64,1}, NX::Int64, NY::Int64, vizi::Array{Int64,2},
+                    nviz::Array{Int64,1}, dviz::Array{Float64,2}, raiof::Float64 ,dts::String, valor_0::Array{Float64,1})
 
-    # Lê número de variáveis
-    numvar = size(x,1)
+    # Parâmetros, passo mínimo e máximo de iterações estagnado
+    minimo    = 1E-4
+    max_break = 300
 
     # Inicializa os vetores para derivadas
-    dL = zeros(Float64,numvar)
+    dL = zeros(Float64,nel)
 
-    # Inicializa o contador de iterações internas
-    n_int = 0
-
-    # Critério adicional de saída, vezes com passo mínimo
-    minimo = step_min
+    # Inicializa o contador para break estagnado e de avaliações da Fobj
     breaker = 0
-    max_break = fem_f.nbreaker
+    i_int   = 0
+    norma   = 0.0
 
-    for i=1:max_int
+    passo0 = 10.0
 
-        # Aplica filtro de densidade 65
-        xf = Aplica_Filtro(x, filt)
+    L0 = F_Obj(x, rho, mult_res, 2, nel, ijk, ID, K0, M0, SP, vmin,
+                                 F, NX, NY, vizi, nviz, dviz, raiof, valor_0)
+    contaev = 2
 
-        # Atualiza as matrizes de elementos finitos filtrados
-        fun, res = F_Obj(xf, fem_v, fem_f)#, valor_zero)
-        count += 1
+    tmp = @elapsed for i=1:max_int
 
-        # Calcula o gradiente de L
-        dL = Sensibilidade(xf, valor_res, mult_res, rho, fem_v, fem_f, filt)#, valor_zero)
+        # Calcula sensibilidade
+        dL = F_Obj(x, rho, mult_res, 3, nel, ijk, ID, K0, M0, SP, vmin,
+                                     F, NX, NY, vizi, nviz, dviz, raiof, valor_0)
+        contaev += 1
 
         # Bloqueia a direcao e zera o gradiente se bloqueado
-        @inbounds for j=1:numvar
-            if dL[j] > 0.0 && x[j] <= (xl[j]+minimo)
+        @inbounds for j=1:nel
+            if dL[j] > 0.0 && x[j] <= 0.0
                 dL[j]  = 0.0
-                x[j]   = xl[j]
-            end
-            if dL[j] < 0.0 && x[j] >= (xu[j]-minimo)
+            elseif dL[j] < 0.0 && x[j] >= 1.0
                 dL[j]  = 0.0
-                x[j]   = xu[j]
             end
         end
 
@@ -44,31 +45,26 @@ function Steepest(x::Array{Float64,1}, valor_res, mult_res::Array{Float64,1},rho
         norma = norm(dL)
         dir = -dL/norma
 
-        if norma < tol_int && i > 1
+        if norma < tol_int && i_int > 1
             break
         end
 
         # Search nesta direcao
-        alpha,count = LineSearch(x, mult_res, rho, dL, dir, xl, xu, tol_int, count, fem_v, fem_f, filt, lsearch, step_min)
-
+        (alpha, conta_line, L0) = Wall_Search(x, rho, mult_res, dir, tol_int,
+                                minimo, nel, ijk, ID, K0, M0, SP, vmin, F, NX, NY, vizi, nviz, dviz, raiof, passo0, L0, valor_0)
+        contaev += conta_line
+        i_int += 1
         # incrementa a estimativa do ponto
         x = x + alpha*dir
 
-        # Número de passos internos
-        n_int += 1
+        passo0 = alpha*2.0
+        if i%5 == 0
+            @printf(".")
+        end
 
-        # Extrai derivada para verificação
-        if false
-            fmesh = string("sens_pot_loo.txt")
-            if isfile(fmesh)
-                rm(fmesh)
-            end
-            saida  = open(fmesh,"a")
-            for z = 1:numvar
-                println(saida,dL[z])
-            end
-            close(saida)
-            error("\n Derivada em ",fmesh)
+        # Bloqueia o x se passar
+        @inbounds for j=1:nel
+            x[j] = min(1.0,max(x[j],0.0))
         end
 
         # Critério adicional de saída
@@ -78,12 +74,11 @@ function Steepest(x::Array{Float64,1}, valor_res, mult_res::Array{Float64,1},rho
                 break
             end
         end
-        @printf(".")
 
     end #for i
     @printf("\n")
+    # Da o display do laço interno
+    Imprime_Int(i_int, contaev, norma, dts, tmp)
 
-
-
-    return x,dL,count,n_int
+    return x, dL
 end #function
