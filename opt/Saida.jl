@@ -38,7 +38,7 @@ function Imprime_Ext(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,
         file2 = string(dts,"_C.txt")
 
         saida  = open(file1,"a")
-        #saida2 = open(file2,"a")
+        saida2 = open(file2,"a")
 
         @printf(saida,"\n  iter: %d \torigin. fitness: %.6e\tvolume:\t%.5f ", i_ext, valor_fun, vol)
         @printf(saida,"\n  rho: %.4f", rho)
@@ -49,10 +49,14 @@ function Imprime_Ext(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,
         @printf(saida,"\n")
 
         #Fobj e volume
-        #println(saida2,valor_fun,"  \t",vol)
+        if size(mult_res,1) == 2
+            println(saida2,valor_fun," ",vol," ",valor_res[1]," ",valor_res[2]," ",rho," ", mult_res[1]," ",mult_res[2])
+        else
+            println(saida2,valor_fun," ",vol," ",valor_res[1]," ",rho," ", mult_res[1])
+        end
 
         close(saida)
-        #close(saida2)
+        close(saida2)
         # Imprime GMSH
         Adiciona_Vista_Escalar_Gmsh(fmesh, "x", nel, x, Float64(i_ext))
 #        Adiciona_Vista_Escalar_Gmsh(fmesh2, "x", nel, Filtro_Dens(x, nel, vizi, nviz, dviz, raiof), Float64(i_ext))
@@ -93,6 +97,7 @@ function Imprime_0(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}
         end
 
         saida  = open(file1,"a")
+        saida2 = open(file2,"a")
 
         # Imprime malha no gmsh
         Inicializa_Malha_Gmsh(fmesh, nnos, nel, ijk, coord, 2)
@@ -100,7 +105,12 @@ function Imprime_0(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}
         println(saida,"\n  LagAug:: ",dts)
         println(saida,"\n  Nelems:: ",nel," | Iter:: ",max_ext,"/",max_int," | Tol:: ",tol_ext,"/",tol_int)
         close(saida)
+
+        println(saida2, "valor_fun\tvol\tvalor_res\trho\tmult_res")
+        close(saida2)
     end
+
+
 
     Imprime_Ext(x, rho, mult_res, valor_fun, valor_res, 0, dts, nel)#, vizi, nviz, dviz, raiof)
 

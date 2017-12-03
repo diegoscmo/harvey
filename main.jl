@@ -30,7 +30,7 @@ include("fobj\\7_Pot_A-Est.jl")
 
 
 # Rotina principal
-function main()
+function main(caso::Int64)
 
     # Nome do Arquivo ou data de execução("OFF desliga")
     #dts = "1_Est_1800"
@@ -38,10 +38,11 @@ function main()
     #dts = "4_Din_A-Est_1800_f180-A099"
     #dts = "5_Pot_1800_f180_alfa1"
     #dts = "6_Pot_R-Est_1800_f600_Y100"
-    dts  = "7_Pot_A-Est_1800_f750_A099"
+    #dts  = "7_Pot_A-Est_1800_f600_A0999"
+    dts = "teste"
 
     # Parâmetros do Lagrangiano Aumentado
-    max_ext     = 100       # Máximo de iteracoes externas
+    max_ext     = 50       # Máximo de iteracoes externas
     max_int     = 300       # Máximo de iterações internas
     tol_ext     = 1E-6      # Tolerância do laço externo
     tol_int     = 1E-6      # Tolerância do laço interno

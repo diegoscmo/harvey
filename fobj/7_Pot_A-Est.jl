@@ -6,14 +6,15 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
                dviz::Array{Float64,2}, raiof::Float64, Y0::Array{Float64,1})
 
     # Parâmetros do problema dinãmico
-    freq = 100.0
+    freq = 600.0
     w    = 2.0*pi*freq
 
     alfa = 0.0
-    beta = 1E-8
+    #beta = 1E-8
+    beta = 0.1/w
 
     # Peso do problema de potência e do estático
-    A   = 0.99
+    A   = 0.999
     B   = 1.0 - A
 
     # Filtra o x antes de qualquer coisa
@@ -44,7 +45,7 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
     end
 
     # Função objetivo, flexibilidade estática
-    valor_fun = A*0.5*w*real(im*dot(F,UD))/Y0[1] + B*abs(dot(F,US))/Y0[2]
+    valor_fun = A*0.5*w*real(im*dot(F,UD))/Y0[1] + B*0.5*abs(dot(F,US))/Y0[2]
 
     # Funções de restrição, volume normalizada
     valor_res = [ (mean(x)-0.49)/0.51 ]
