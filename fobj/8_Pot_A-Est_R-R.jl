@@ -1,42 +1,28 @@
 # Define o Função Objetivo
 function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, tipo::Int64,
-               nel::Int64, ijk::Array{Int64,2}, ID::Array{Int64,2},
-               K0::Array{Float64,2},
-               #K0::StaticArrays.SArray{Tuple{8,8},Float64,2,64},
-               M0::Array{Float64,2},
-               #M0::StaticArrays.SArray{Tuple{8,8},Float64,2,64},
-               SP::Float64, vmin::Float64, F::Array{Float64,1},
+               nel::Int64, ijk::Array{Int64,2}, ID::Array{Int64,2}, K0::Array{Float64,2},
+               M0::Array{Float64,2}, SP::Float64, vmin::Float64, F::Array{Float64,1},
                NX::Int64, NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1},
-               dviz::Array{Float64,2}, raiof::Float64)
+               dviz::Array{Float64,2}, raiof::Float64, Y0::Array{Float64,1},
+               caso::Int64, freq::Float64, alfa::Float64, beta::Float64, A::Float64, Ye::Float64 )
 
     # Parâmetros do problema dinãmico
-    freq = 100.0
-    alfa = 0.0
-    beta = 1E-8
     w    = 2.0*pi*freq
 
     # Peso do problema de potência e do estático
-    A   = 0.05
-    B   = 1.0 - A
+    B   = 1.0 - abs(A)
 
     # Restrição do R
-    R_m = 99.9
+    R_m = Ye
 
     # Filtra o x antes de qualquer coisa
-    x = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
+    xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
 
     # Monta matriz de rigidez e massa global, aqui é aplicado o SIMP
-    KG, MG = Global_KM(x, nel, ijk, ID, K0, M0, SP, vmin)
+    KG, MG = Global_KM(xf, nel, ijk, ID, K0, M0, SP, vmin)
 
-    # Resolve o sistema dinamico
-#    UD = Array{Complex{Float64}}(uninitialized,nel)
-#    try
-#        KD = Hermitian(sparse(KG + w*im*(alfa*MG + beta*KG) - (w^2.0)*MG))
-#        UD = vec(cholfact(KD)\F)
-#    catch
-        KD = sparse(KG + w*im*(alfa*MG + beta*KG) - (w^2.0)*MG)
-        UD = vec(lufact(KD)\F)
-#    end
+    KD = sparse(KG + w*im*(alfa*MG + beta*KG) - (w^2.0)*MG)
+    UD = vec(lufact(KD)\F)
 
     # Resolve o sistema estático
     US = vec(cholfact(Symmetric(KG))\F)
@@ -45,28 +31,34 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
     if tipo == 0
         Y0 = Array{Float64}(uninitialized,2)
         Y0[1] = 0.5*w*real(im*dot(F,UD))
+        if A<0.0
+            Y0[1] = -Y0[1]
+        end
         Y0[2] = 0.5*(abs(dot(F,US)))
        return Y0
     end
 
     # Função objetivo, flexibilidade estática
-    valor_fun = -A*0.5*w*real(im*dot(F,UD))/Y0[1] + B*abs(dot(F,US)))/Y0[2]
+    valor_fun1 = A*0.5*w*real(im*dot(F,UD))/Y0[1]
+    valor_fun2 = B*0.5*abs(dot(F,US))/Y0[2]
+
+    valor_fun = valor_fun1 + valor_fun2
 
     # Energia cinética e potencial
-    Ec = 0.25*(w^2.0)*(UD'*MG*UD)
-    Ep = 0.25*(w^2.0)*(UD'*KG*UD)
+    Ec = 0.25*(w^2.0)*(adjoint(UD)*MG*UD)
+    Ep = 0.25*(adjoint(UD)*KG*UD)
 
     # R e R corrigido
-    R  = Ec/Ep
-    R_c = 100.0+100.0*log10(R)
+    R  = real(Ec/Ep)
+    R_c = 1.0+1.0*log10(R)
 
     # Funções de restrição, volume normalizada
     valor_res = [ (mean(x)-0.49)/0.51
-                   R_c - R_m]
+                   real(R_c - R_m)]
 
     # Se quiser só a F_Obj, retorna
     if tipo == 1
-        return valor_fun, valor_res
+        return valor_fun, valor_res, [valor_fun1;valor_fun2;real(Ep/Ec)]
 
         # Função Lagrangiana
     elseif tipo == 2
@@ -107,31 +99,38 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
         @inbounds for j=1:nel
 
             # Localiza deslocamentos e lambdas
-            nos = ijk[j,:]
+            nos_ele = ijk[j,:]
 
             # Zera Ue, complexo para cálculos Harmônicos
-            UDe = complex(zeros(Float64,8))
-            USe = zeros(Float64,8)
+            USe = zeros(8)
+            UDe = zeros(Complex,8)
+            adj_Re = zeros(Complex,8)
 
             # Busca o U dos nós não restritos
             for k=1:4
-                for q=1:2
-                    loc = ID[nos[k],q]
-                    if loc != 0
-                        UDe[2*k-2+q] = UD[loc]
-                        USe[2*k-2+q] = US[loc]
-                    end #loc
-                end #q
+                no_k = nos_ele[k]
+                gdli = ID[no_k,1]
+                gdlj = ID[no_k,2]
+                if gdli != 0
+                    UDe[2*k-1] = UD[gdli]
+                    USe[2*k-1] = US[gdli]
+                    adj_Re[2*k-1] = adj_R[gdli]
+                end
+                if gdlj != 0
+                    UDe[2*k] = UD[gdlj]
+                    USe[2*k] = US[gdlj]
+                    adj_Re[2*k] = adj_R[gdlj]
+                end
             end #k
 
             # derivada das matrizes de rigidez e massa 109, corrigida
-            dKedx  = corr_min*SP*x[j]^(SP-1.0)*K0
+            dKedx  = corr_min*SP*xf[j]^(SP-1.0)*K0
 
             # Correção Olhoff & Du, 91 + Correção do valor minimo
-            if x[j] >= 0.1
-                dMedx = corr_min*M0
-            else
-                dMedx = corr_min*(6.0*(6.0E5)*x[j]^5.0+7.0*(-5.0E6)*x[j]^6.0)*M0
+            dMedx = corr_min*M0
+
+            if xf[j] < 0.1
+                dMedx = (36E5*xf[j]^5.0 - 35E6*xf[j]^6.0)*dMedx
             end
 
             # Derivada da matriz dinamica
@@ -141,15 +140,15 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
             dPdx = -0.5*w*real(transpose(UDe)*dKDedx*UDe*im)/Y0[1]
 
             # Derivada da flexibilidade estática
-            dSdx = real( -transpose(USe)*dKedx*USe )/Y0[2]
+            dSdx = 0.5*real( -transpose(USe)*dKedx*USe )/Y0[2]
 
             # Derivada do R
-            dRdx_1 = +(0.25*(w^2.0)/Ep)*(UDe'dMedx*UDe)
-            dRdx_2 = -(0.25*Ec/(Ep^2.0))*(UDe'*dKedx*UDe)
-            dRdx_3 = +real(adj_Re*(dKDedx*UDe))
+            dRdx_1 = +(0.25*(w^2.0)/Ep)*(adjoint(UDe)*dMedx*UDe)
+            dRdx_2 = -(0.25*Ec/(Ep^2.0))*(adjoint(UDe)*dKedx*UDe)
+            dRdx_3 = +real(transpose(adj_Re)*(dKDedx*UDe))
 
             # Derivada do R corrigida
-            dRdx = (100.0/(log(10.0)*R))*(dRdx_1 + dRdx_2 + dRdx_3)
+            dRdx = (1.0/(log(10.0)*R))*real((dRdx_1 + dRdx_2 + dRdx_3))
 
             # Derivada do LA
             dL[j] = A*dPdx + B*dSdx + dL1 +  dL2*dRdx

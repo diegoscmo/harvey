@@ -10,10 +10,10 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
     if caso == 1
 
         # Filtra o x antes de qualquer coisa
-        x = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
+        xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
 
         # Remonta matriz de rigidez global, aqui é aplicado o SIMP
-        KG, = Global_KM(x, nel, ijk, ID, K0, M0, SP, vmin)
+        KG, = Global_KM(xf, nel, ijk, ID, K0, M0, SP, vmin)
 
         # Resolve o sistema novamente
         US = vec(cholfact(Symmetric(KG))\F)
@@ -32,7 +32,7 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
 
         # Se quiser a função obj normalizada
         if tipo == 1
-            return valor_fun, valor_res
+            return valor_fun, valor_res, [valor_fun]
 
             # Função Lagrangiana
         elseif tipo == 2
@@ -46,11 +46,11 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
 
             return L
 
-            # Calculo da derivada
+      # Calculo da derivada
         elseif tipo == 3
 
             # Inicializa a derivada interna
-            dL = zeros(Float64,nel)
+            dL = Array{Float64}(uninitialized,nel)
 
             # Valor para correção da derivada
             corr_min = 1.0 - vmin
@@ -64,26 +64,29 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
             @inbounds for j=1:nel
 
                 # Localiza deslocamentos e lambdas
-                nos = ijk[j,:]
+                nos_ele = ijk[j,:]
 
                 # Zera Ue, complexo para cálculos Harmônicos
-                USe = zeros(Float64,8)
+                USe = zeros(8)
 
                 # Busca o U dos nós não restritos
-                for k=1:4
-                    for q=1:2
-                        loc = ID[nos[k],q]
-                        if loc != 0
-                            USe[2*k-2+q] = US[loc]
-                        end #loc
-                    end #q
+                for k=[1,2,3,4]
+                    no_k = nos_ele[k]
+                    gdli = ID[no_k,1]
+                    gdlj = ID[no_k,2]
+                    if gdli != 0
+                        USe[2*k-1] = US[gdli]
+                    end
+                    if gdlj != 0
+                        USe[2*k] = US[gdlj]
+                    end
                 end #k
 
                 # derivada das matrizes de rigidez e massa 109, corrigida
-                dKedx  = corr_min*SP*x[j]^(SP-1.0)*K0
+                dKedx  = corr_min*SP*xf[j]^(SP-1.0)*K0
 
                 # Derivada da flexibilidade estática 57
-                dSdx = real(-USe'*dKedx*USe) / Y0[1]
+                dSdx = -0.5*transpose(USe)*dKedx*USe / Y0[1]
 
                 # Derivada do LA
                 dL[j] = dSdx + dL2
@@ -104,11 +107,12 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
         w    = 2.0*pi*freq
 
         # Filtra o x antes de qualquer coisa
-        x = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
+        xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
 
         # Monta matriz de rigidez e massa global, aqui é aplicado o SIMP
-        KG, MG = Global_KM(x, nel, ijk, ID, K0, M0, SP, vmin)
+        KG, MG = Global_KM(xf, nel, ijk, ID, K0, M0, SP, vmin)
 
+        # Resolve o sistema dinamico
         KD = sparse(KG + w*im*(alfa*MG + beta*KG) - (w^2.0)*MG)
         UD = vec(lufact(KD)\F)
 
@@ -126,7 +130,7 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
 
         # Se quiser só a F_Obj, retorna
         if tipo == 1
-            return valor_fun, valor_res
+            return valor_fun, valor_res, [valor_fun]
 
             # Função Lagrangiana
         elseif tipo == 2
@@ -140,11 +144,11 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
 
             return L
 
-            # Calculo da derivada
+      # Calculo da derivada
         elseif tipo == 3
 
             # Inicializa a derivada interna
-            dL = zeros(Float64,nel)
+            dL = Array{Float64}(uninitialized,nel)
 
             # Valor para correção da derivada
             corr_min = 1.0 - vmin
@@ -162,29 +166,32 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
             @inbounds for j=1:nel
 
                 # Localiza deslocamentos e lambdas
-                nos = ijk[j,:]
+                nos_ele = ijk[j,:]
 
                 # Zera Ue, complexo para cálculos Harmônicos
-                UDe = complex(zeros(Float64,8))
+                UDe = zeros(Complex,8)
 
                 # Busca o U dos nós não restritos
                 for k=1:4
-                    for q=1:2
-                        loc = ID[nos[k],q]
-                        if loc != 0
-                            UDe[2*k-2+q] = UD[loc]
-                        end #loc
-                    end #q
+                    no_k = nos_ele[k]
+                    gdli = ID[no_k,1]
+                    gdlj = ID[no_k,2]
+                    if gdli != 0
+                        UDe[2*k-1] = UD[gdli]
+                    end
+                    if gdlj != 0
+                        UDe[2*k] = UD[gdlj]
+                    end
                 end #k
 
                 # derivada das matrizes de rigidez e massa 109, corrigida
-                dKedx  = corr_min*SP*x[j]^(SP-1.0)*K0
+                dKedx  = corr_min*SP*xf[j]^(SP-1.0)*K0
 
                 # Correção Olhoff & Du, 91 + Correção do valor minimo
-                if x[j] >= 0.1
-                    dMedx = corr_min*M0
-                else
-                    dMedx = corr_min*(6.0*(6.0E5)*x[j]^5.0+7.0*(-5.0E6)*x[j]^6.0)*M0
+                dMedx = corr_min*M0
+
+                if xf[j] < 0.1
+                    dMedx = (36E5*xf[j]^5.0 - 35E6*xf[j]^6.0)*dMedx
                 end
 
                 # Derivada da matriz dinamica
@@ -209,23 +216,18 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
     elseif caso == 3
 
         # Parâmetros do problema dinãmico
-        #freq = 180.0
-        #alfa = 0.0
-        #beta = 1E-8
         w    = 2.0*pi*freq
 
-        # Porcentagem da flexibilidade estatica
-        #Ye = 1.0
-
         # Filtra o x antes de qualquer coisa
-        x = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
+        xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
 
         # Monta matriz de rigidez e massa global, aqui é aplicado o SIMP
-        KG, MG = Global_KM(x, nel, ijk, ID, K0, M0, SP, vmin)
+        KG, MG = Global_KM(xf, nel, ijk, ID, K0, M0, SP, vmin)
 
         # Resolve o sistema estático
         US = vec(cholfact(Symmetric(KG))\F)
 
+    #    # Resolve o sistema dinamico
         KD = sparse(KG + w*im*(alfa*MG + beta*KG) - (w^2.0)*MG)
         UD = vec(lufact(KD)\F)
 
@@ -240,13 +242,15 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
         # Função objetivo, flexibilidade dinamica
         valor_fun = abs(real(dot(F,UD))) / Y0[1]
 
+        valor_est = 0.5*(abs(dot(F,US)))/Y0[2]
+
         # Funções de restrição, volume normalizada
         valor_res = [ (mean(x)-0.49)/0.51
-        0.5*(abs(dot(F,US)))/Y0[2]-Ye ]
+                    valor_est-Ye ]
 
         # Se quiser só a F_Obj, retorna
         if tipo == 1
-            return valor_fun, valor_res
+            return valor_fun, valor_res, [valor_fun;valor_est]
 
             # Função Lagrangiana
         elseif tipo == 2
@@ -260,11 +264,11 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
 
             return L
 
-            # Calculo da derivada
+      # Calculo da derivada
         elseif tipo == 3
 
             # Inicializa a derivada interna
-            dL = zeros(Float64,nel)
+            dL = Array{Float64}(uninitialized,nel)
 
             # Valor para correção da derivada
             corr_min = 1.0 - vmin
@@ -284,40 +288,44 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
             @inbounds for j=1:nel
 
                 # Localiza deslocamentos e lambdas
-                nos = ijk[j,:]
+                nos_ele = ijk[j,:]
 
                 # Zera Ue, complexo para cálculos Harmônicos
-                USe =  zeros(Float64,8)
-                UDe = complex(zeros(Float64,8))
+                USe = zeros(8)
+                UDe = zeros(Complex,8)
 
                 # Busca o U dos nós não restritos
                 for k=1:4
-                    for q=1:2
-                        loc = ID[nos[k],q]
-                        if loc != 0
-                            USe[2*k-2+q] = US[loc]
-                            UDe[2*k-2+q] = UD[loc]
-                        end #loc
-                    end #q
+                    no_k = nos_ele[k]
+                    gdli = ID[no_k,1]
+                    gdlj = ID[no_k,2]
+                    if gdli != 0
+                        USe[2*k-1] = US[gdli]
+                        UDe[2*k-1] = UD[gdli]
+                    end
+                    if gdlj != 0
+                        USe[2*k] = US[gdlj]
+                        UDe[2*k] = UD[gdlj]
+                    end
                 end #k
 
                 # derivada das matrizes de rigidez e massa 109, corrigida
-                dKedx  = corr_min*SP*x[j]^(SP-1.0)*K0
+                dKedx  = corr_min*SP*xf[j]^(SP-1.0)*K0
 
                 # Correção Olhoff & Du, 91 + Correção do valor minimo
-                if x[j] >= 0.1
-                    dMedx = corr_min*M0
-                else
-                    dMedx = corr_min*(6.0*(6.0E5)*x[j]^5.0+7.0*(-5.0E6)*x[j]^6.0)*M0
+                dMedx = corr_min*M0
+
+                if xf[j] < 0.1
+                    dMedx = (36E5*xf[j]^5.0 - 35E6*xf[j]^6.0)*dMedx
                 end
 
                 # Derivada da matriz dinamica
                 dKDedx = dKedx*(1.0+im*w*beta) + dMedx*(-w^2.0+im*w*alfa)
 
                 # Derivada do LA - flexibilidade dinamica 57
-                dDdx = real( -adj*(transpose(UDe)*dKDedx*UDe) ) / Y0[1]
+                dDdx = -real(adj*(transpose(UDe)*dKDedx*UDe))/Y0[1]
 
-                dSdx = real( -transpose(USe)*dKedx*USe ) /Y0[2]
+                dSdx = -0.5*transpose(USe)*dKedx*USe/Y0[2]
 
                 # Derivada do LA
                 dL[j] = dDdx + dL1 + dL2*dSdx
@@ -335,24 +343,21 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
     elseif caso == 4
 
         # Parâmetros do problema dinãmico
-        #    freq = 180.0
         w    = 2.0*pi*freq
-        #    alfa = 0.0
-        #    beta = 1E-8
 
         # Peso do problema dinâmico e estático
-        #    A   = 0.99
         B   = 1.0 - A
 
         # Filtra o x antes de qualquer coisa
-        x = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
+        xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
 
         # Monta matriz de rigidez e massa global, aqui é aplicado o SIMP
-        KG, MG = Global_KM(x, nel, ijk, ID, K0, M0, SP, vmin)
+        KG, MG = Global_KM(xf, nel, ijk, ID, K0, M0, SP, vmin)
 
         # Resolve o sistema estático
         US = vec(cholfact(Symmetric(KG))\F)
 
+        # Resolve o sistema dinamico
         KD = sparse(KG + w*im*(alfa*MG + beta*KG) - (w^2.0)*MG)
         UD = vec(lufact(KD)\F)
 
@@ -361,18 +366,22 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
             Y0 = Array{Float64}(uninitialized,2)
             Y0[1] = abs(dot(F,UD))
             Y0[2] = 0.5*abs(dot(F,US))
-            return Y0
+           return Y0
         end
 
         # Função objetivo, flexibilidade estática
-        valor_fun = real(A*abs(dot(F,UD))/Y0[1] + B*0.5*abs(dot(F,US))/Y0[2])
+        valor_fun1 = A*real(abs(dot(F,UD))/Y0[1])
+
+        valor_fun2 = B*0.5*abs(dot(F,US))/Y0[2]
+
+        valor_fun = valor_fun1 + valor_fun2
 
         # Funções de restrição, volume normalizada
         valor_res = [ (mean(x)-0.49)/0.51 ]
 
         # Se quiser só a F_Obj, retorna
         if tipo == 1
-            return valor_fun, valor_res
+            return valor_fun, valor_res, [valor_fun1;valor_fun2]
 
             # Função Lagrangiana
         elseif tipo == 2
@@ -386,11 +395,11 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
 
             return L
 
-            # Calculo da derivada
+      # Calculo da derivada
         elseif tipo == 3
 
             # Inicializa a derivada interna
-            dL = zeros(Float64,nel)
+            dL = Array{Float64}(uninitialized,nel)
 
             # Valor para correção da derivada
             corr_min = 1.0 - vmin
@@ -408,40 +417,44 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
             @inbounds for j=1:nel
 
                 # Localiza deslocamentos e lambdas
-                nos = ijk[j,:]
+                nos_ele = ijk[j,:]
 
                 # Zera Ue, complexo para cálculos Harmônicos
-                USe = zeros(Float64,8)
-                UDe = zeros(Complex{Float64},8)
+                USe = zeros(8)
+                UDe = zeros(Complex,8)
 
                 # Busca o U dos nós não restritos
                 for k=1:4
-                    for q=1:2
-                        loc = ID[nos[k],q]
-                        if loc != 0
-                            USe[2*k-2+q] = US[loc]
-                            UDe[2*k-2+q] = UD[loc]
-                        end #loc
-                    end #q
+                    no_k = nos_ele[k]
+                    gdli = ID[no_k,1]
+                    gdlj = ID[no_k,2]
+                    if gdli != 0
+                        USe[2*k-1] = US[gdli]
+                        UDe[2*k-1] = UD[gdli]
+                    end
+                    if gdlj != 0
+                        USe[2*k] = US[gdlj]
+                        UDe[2*k] = UD[gdlj]
+                    end
                 end #k
 
                 # derivada das matrizes de rigidez e massa 109, corrigida
-                dKedx  = corr_min*SP*x[j]^(SP-1.0)*K0
+                dKedx  = corr_min*SP*xf[j]^(SP-1.0)*K0
 
                 # Correção Olhoff & Du, 91 + Correção do valor minimo
-                if x[j] >= 0.1
-                    dMedx = corr_min*M0
-                else
-                    dMedx = corr_min*(6.0*(6.0E5)*x[j]^5.0+7.0*(-5.0E6)*x[j]^6.0)*M0
+                dMedx = corr_min*M0
+
+                if xf[j] < 0.1
+                    dMedx = (36E5*xf[j]^5.0 - 35E6*xf[j]^6.0)*dMedx
                 end
 
                 # Derivada da matriz dinamica
                 dKDedx = dKedx*(1.0+im*w*beta) + dMedx*(-w^2.0+im*w*alfa)
 
                 # Derivada do LA - flexibilidade dinamica 57
-                dDdx = real( -adj*(transpose(UDe)*dKDedx*UDe) )/Y0[1]
+                dDdx = real( -adj*(transpose(UDe)*dKDedx*UDe) ) /Y0[1]
 
-                dSdx = real( -transpose(USe)*dKedx*USe )/Y0[2]
+                dSdx = 0.5*real( -transpose(USe)*dKedx*USe ) /Y0[2]
 
                 # Derivada do LA
                 dL[j] = A*dDdx + B*dSdx + dL1
@@ -457,44 +470,39 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
 
         ###################### POTENCIA ######################
     elseif caso == 5
+
         # Parâmetros do problema dinãmico
-        #    freq = 180.0
         w    = 2.0*pi*freq
-        #    alfa = 1.0
-        #beta = 1E-8
-
-        #alfa = 0.0
-        #beta = 0.1/w
-
-        #alfa = 0.8*w
-        #    beta = 0.0
 
         # Filtra o x antes de qualquer coisa
-        x = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
+        xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
 
         # Monta matriz de rigidez e massa global, aqui é aplicado o SIMP
-        KG, MG = Global_KM(x, nel, ijk, ID, K0, M0, SP, vmin)
+        KG, MG = Global_KM(xf, nel, ijk, ID, K0, M0, SP, vmin)
 
+        # Resolve o sistema dinamico
         KD = sparse(KG + w*im*(alfa*MG + beta*KG) - (w^2.0)*MG)
         UD = vec(lufact(KD)\F)
 
         Pa   = 0.5*w*real(im*dot(F,UD))
 
+        PadB = 100.0  + 10.0*log10(Pa)
+
         # Retorna valores zero
         if tipo == 0
-            #return [Pa]
-            return [100.0  + 10.0*log10(Pa)]
+           return [PadB]
         end
 
         # Função objetivo, flexibilidade estática
-        valor_fun = (100.0  + 10.0*log10(Pa))/Y0[1]
+        valor_fun = PadB/Y0[1]
 
         # Funções de restrição, volume normalizada
         valor_res = [ (mean(x)-0.49)/0.51 ]
 
         # Se quiser só a F_Obj, retorna
         if tipo == 1
-            return valor_fun, valor_res
+
+            return valor_fun, valor_res, [valor_fun]
 
             # Função Lagrangiana
         elseif tipo == 2
@@ -508,11 +516,11 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
 
             return L
 
-            # Calculo da derivada
+      # Calculo da derivada
         elseif tipo == 3
 
             # Inicializa a derivada interna
-            dL = zeros(Float64,nel)
+            dL = Array{Float64}(uninitialized,nel)
 
             # Valor para correção da derivada
             corr_min = 1.0 - vmin
@@ -527,29 +535,32 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
             @inbounds for j=1:nel
 
                 # Localiza deslocamentos e lambdas
-                nos = ijk[j,:]
+                nos_ele = ijk[j,:]
 
                 # Zera Ue, complexo para cálculos Harmônicos
-                UDe = complex(zeros(Float64,8))
+                UDe = zeros(Complex,8)
 
                 # Busca o U dos nós não restritos
                 for k=1:4
-                    for q=1:2
-                        loc = ID[nos[k],q]
-                        if loc != 0
-                            UDe[2*k-2+q] = UD[loc]
-                        end #loc
-                    end #q
+                    no_k = nos_ele[k]
+                    gdli = ID[no_k,1]
+                    gdlj = ID[no_k,2]
+                    if gdli != 0
+                        UDe[2*k-1] = UD[gdli]
+                    end
+                    if gdlj != 0
+                        UDe[2*k] = UD[gdlj]
+                    end
                 end #k
 
                 # derivada das matrizes de rigidez e massa 109, corrigida
-                dKedx  = corr_min*SP*x[j]^(SP-1.0)*K0
+                dKedx  = corr_min*SP*xf[j]^(SP-1.0)*K0
 
                 # Correção Olhoff & Du, 91 + Correção do valor minimo
-                if x[j] >= 0.1
-                    dMedx = corr_min*M0
-                else
-                    dMedx = corr_min*(6.0*(6.0E5)*x[j]^5.0+7.0*(-5.0E6)*x[j]^6.0)*M0
+                dMedx = corr_min*M0
+
+                if xf[j] < 0.1
+                    dMedx = (36E5*xf[j]^5.0 - 35E6*xf[j]^6.0)*dMedx
                 end
 
                 # Derivada da matriz dinamica
@@ -559,8 +570,6 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
                 dPdx = -0.5*w*real(transpose(UDe)*dKDedx*UDe*im)
 
                 dPBdx = (10.0/(log(10.0)*Pa))*dPdx/Y0[1]
-                #dPBdx = dPdx / Y0[1]
-
 
                 # Derivada do LA
                 dL[j] = dPBdx + dL1
@@ -577,24 +586,13 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
     elseif caso == 6
 
         # Parâmetros do problema dinãmico
-        #    freq = 600.0
         w    = 2.0*pi*freq
 
-        #    alfa = 0.0
-        #beta = 0.0
-        #    beta = 1E-8
-        #alfa = 0.8*w
-        #beta = 0.1/w
-
-
-        # Porcentagem da flexibilidade estatica
-        Ye = 1.0
-
         # Filtra o x antes de qualquer coisa
-        x = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
+        xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
 
         # Monta matriz de rigidez e massa global, aqui é aplicado o SIMP
-        KG, MG = Global_KM(x, nel, ijk, ID, K0, M0, SP, vmin)
+        KG, MG = Global_KM(xf, nel, ijk, ID, K0, M0, SP, vmin)
 
         KD = sparse(KG + w*im*(alfa*MG + beta*KG) - (w^2.0)*MG)
         UD = vec(lufact(KD)\F)
@@ -607,19 +605,21 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
             Y0 = Array{Float64}(uninitialized,2)
             Y0[1] = 0.5*w*real(im*dot(F,UD))
             Y0[2] = 0.5*(abs(dot(F,US)))
-            return Y0
+           return Y0
         end
 
         # Função objetivo, flexibilidade estática
         valor_fun = 0.5*w*real(im*dot(F,UD)) /Y0[1]
 
+        valor_est = 0.5*(abs(dot(F,US)))/Y0[2]
+
         # Funções de restrição, volume normalizada
         valor_res = [ (mean(x)-0.49)/0.51
-        0.5*(abs(dot(F,US)))/Y0[2]-Ye ]
+                    valor_est-Ye ]
 
         # Se quiser só a F_Obj, retorna
         if tipo == 1
-            return valor_fun, valor_res
+            return valor_fun, valor_res, [valor_fun;valor_est]
 
             # Função Lagrangiana
         elseif tipo == 2
@@ -633,11 +633,11 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
 
             return L
 
-            # Calculo da derivada
+      # Calculo da derivada
         elseif tipo == 3
 
             # Inicializa a derivada interna
-            dL = zeros(Float64,nel)
+            dL = Array{Float64}(uninitialized,nel)
 
             # Valor para correção da derivada
             corr_min = 1.0 - vmin
@@ -655,31 +655,35 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
             @inbounds for j=1:nel
 
                 # Localiza deslocamentos e lambdas
-                nos = ijk[j,:]
+                nos_ele = ijk[j,:]
 
                 # Zera Ue, complexo para cálculos Harmônicos
-                UDe = complex(zeros(Float64,8))
-                USe = zeros(Float64,8)
+                USe = zeros(8)
+                UDe = zeros(Complex,8)
 
                 # Busca o U dos nós não restritos
                 for k=1:4
-                    for q=1:2
-                        loc = ID[nos[k],q]
-                        if loc != 0
-                            UDe[2*k-2+q] = UD[loc]
-                            USe[2*k-2+q] = US[loc]
-                        end #loc
-                    end #q
+                    no_k = nos_ele[k]
+                    gdli = ID[no_k,1]
+                    gdlj = ID[no_k,2]
+                    if gdli != 0
+                        UDe[2*k-1] = UD[gdli]
+                        USe[2*k-1] = US[gdli]
+                    end
+                    if gdlj != 0
+                        UDe[2*k] = UD[gdlj]
+                        USe[2*k] = US[gdlj]
+                    end
                 end #k
 
                 # derivada das matrizes de rigidez e massa 109, corrigida
-                dKedx  = corr_min*SP*x[j]^(SP-1.0)*K0
+                dKedx  = corr_min*SP*xf[j]^(SP-1.0)*K0
 
                 # Correção Olhoff & Du, 91 + Correção do valor minimo
-                if x[j] >= 0.1
-                    dMedx = corr_min*M0
-                else
-                    dMedx = corr_min*(6.0*(6.0E5)*x[j]^5.0+7.0*(-5.0E6)*x[j]^6.0)*M0
+                dMedx = corr_min*M0
+
+                if xf[j] < 0.1
+                    dMedx = (36E5*xf[j]^5.0 - 35E6*xf[j]^6.0)*dMedx
                 end
 
                 # Derivada da matriz dinamica
@@ -688,7 +692,7 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
                 # Derivada da Potencia Ativa
                 dPdx = -0.5*w*real(transpose(UDe)*dKDedx*UDe*im) / Y0[1]
 
-                dSdx = real( -transpose(USe)*dKedx*USe ) / Y0[2]
+                dSdx = 0.5*real( -transpose(USe)*dKedx*USe ) / Y0[2]
 
                 # Derivada do LA
                 dL[j] = dPdx + dL1 + dL2*dSdx
@@ -701,27 +705,22 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
             return dL
 
         end #tipo 3
-        ###################### POTENCIA + ESTATICO ######################
+                ###################### POTENCIA + ESTATICO ######################
     elseif caso == 7
 
         # Parâmetros do problema dinãmico
-        #    freq = 600.0
         w    = 2.0*pi*freq
 
-        #    alfa = 0.0
-        #beta = 1E-8
-        #    beta = 0.1/w
-
         # Peso do problema de potência e do estático
-        #    A   = 0.999
         B   = 1.0 - A
 
         # Filtra o x antes de qualquer coisa
-        x = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
+        xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
 
         # Monta matriz de rigidez e massa global, aqui é aplicado o SIMP
-        KG, MG = Global_KM(x, nel, ijk, ID, K0, M0, SP, vmin)
+        KG, MG = Global_KM(xf, nel, ijk, ID, K0, M0, SP, vmin)
 
+        # Resolve o sistema dinamico
         KD = sparse(KG + w*im*(alfa*MG + beta*KG) - (w^2.0)*MG)
         UD = vec(lufact(KD)\F)
 
@@ -733,18 +732,21 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
             Y0 = Array{Float64}(uninitialized,2)
             Y0[1] = 0.5*w*real(im*dot(F,UD))
             Y0[2] = 0.5*(abs(dot(F,US)))
-            return Y0
+           return Y0
         end
 
         # Função objetivo, flexibilidade estática
-        valor_fun = A*0.5*w*real(im*dot(F,UD))/Y0[1] + B*0.5*abs(dot(F,US))/Y0[2]
+        valor_fun1 = A*0.5*w*real(im*dot(F,UD))/Y0[1]
+        valor_fun2 = B*0.5*abs(dot(F,US))/Y0[2]
+
+        valor_fun = valor_fun1 + valor_fun2
 
         # Funções de restrição, volume normalizada
         valor_res = [ (mean(x)-0.49)/0.51 ]
 
         # Se quiser só a F_Obj, retorna
         if tipo == 1
-            return valor_fun, valor_res
+            return valor_fun, valor_res, [valor_fun1;valor_fun2]
 
             # Função Lagrangiana
         elseif tipo == 2
@@ -758,7 +760,7 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
 
             return L
 
-            # Calculo da derivada
+      # Calculo da derivada
         elseif tipo == 3
 
             # Inicializa a derivada interna
@@ -777,31 +779,35 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
             @inbounds for j=1:nel
 
                 # Localiza deslocamentos e lambdas
-                nos = ijk[j,:]
+                nos_ele = ijk[j,:]
 
                 # Zera Ue, complexo para cálculos Harmônicos
-                UDe = complex(zeros(Float64,8))
-                USe = zeros(Float64,8)
+                USe = zeros(8)
+                UDe = zeros(Complex,8)
 
                 # Busca o U dos nós não restritos
                 for k=1:4
-                    for q=1:2
-                        loc = ID[nos[k],q]
-                        if loc != 0
-                            UDe[2*k-2+q] = UD[loc]
-                            USe[2*k-2+q] = US[loc]
-                        end #loc
-                    end #q
+                    no_k = nos_ele[k]
+                    gdli = ID[no_k,1]
+                    gdlj = ID[no_k,2]
+                    if gdli != 0
+                        UDe[2*k-1] = UD[gdli]
+                        USe[2*k-1] = US[gdli]
+                    end
+                    if gdlj != 0
+                        UDe[2*k] = UD[gdlj]
+                        USe[2*k] = US[gdlj]
+                    end
                 end #k
 
                 # derivada das matrizes de rigidez e massa 109, corrigida
-                dKedx  = corr_min*SP*x[j]^(SP-1.0)*K0
+                dKedx  = corr_min*SP*xf[j]^(SP-1.0)*K0
 
                 # Correção Olhoff & Du, 91 + Correção do valor minimo
-                if x[j] >= 0.1
-                    dMedx = corr_min*M0
-                else
-                    dMedx = corr_min*(6.0*(6.0E5)*x[j]^5.0+7.0*(-5.0E6)*x[j]^6.0)*M0
+                dMedx = corr_min*M0
+
+                if xf[j] < 0.1
+                    dMedx = (36E5*xf[j]^5.0 - 35E6*xf[j]^6.0)*dMedx
                 end
 
                 # Derivada da matriz dinamica
@@ -810,10 +816,169 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
                 # Derivada da Potencia Ativa
                 dPdx = -0.5*w*real(transpose(UDe)*dKDedx*UDe*im)/Y0[1]
 
-                dSdx = real( -transpose(USe)*dKedx*USe )/Y0[2]
+                dSdx = 0.5*real( -transpose(USe)*dKedx*USe )/Y0[2]
 
                 # Derivada do LA
                 dL[j] = A*dPdx + B*dSdx + dL1
+
+            end #j
+
+            # Corrige aplicando a derivada do x filtrado em relação ao x original 65
+            dL = dL_Dens(dL, nel, vizi, nviz, dviz, raiof)
+
+            return dL
+
+        end #tipo 3
+
+        ## Pot A Est R R
+    elseif caso == 8
+
+        # Parâmetros do problema dinãmico
+        w    = 2.0*pi*freq
+
+        # Peso do problema de potência e do estático
+        B   = 1.0 - abs(A)
+
+        # Restrição do R
+        R_m = Ye
+
+        # Filtra o x antes de qualquer coisa
+        xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
+
+        # Monta matriz de rigidez e massa global, aqui é aplicado o SIMP
+        KG, MG = Global_KM(xf, nel, ijk, ID, K0, M0, SP, vmin)
+
+        KD = sparse(KG + w*im*(alfa*MG + beta*KG) - (w^2.0)*MG)
+        UD = vec(lufact(KD)\F)
+
+        # Resolve o sistema estático
+        US = vec(cholfact(Symmetric(KG))\F)
+
+        # Retorna valores zero
+        if tipo == 0
+            Y0 = Array{Float64}(uninitialized,2)
+            Y0[1] = 0.5*w*real(im*dot(F,UD))
+            if A<0.0
+                Y0[1] = -Y0[1]
+            end
+            Y0[2] = 0.5*(abs(dot(F,US)))
+           return Y0
+        end
+
+        # Função objetivo, flexibilidade estática
+        valor_fun1 = A*0.5*w*real(im*dot(F,UD))/Y0[1]
+        valor_fun2 = B*0.5*abs(dot(F,US))/Y0[2]
+
+        valor_fun = valor_fun1 + valor_fun2
+
+        # Energia cinética e potencial
+        Ec = 0.25*(w^2.0)*(adjoint(UD)*MG*UD)
+        Ep = 0.25*(adjoint(UD)*KG*UD)
+
+        # R e R corrigido
+        R  = real(Ec/Ep)
+        R_c = 1.0+1.0*log10(R)
+
+        # Funções de restrição, volume normalizada
+        valor_res = [ (mean(x)-0.49)/0.51
+                       real(R_c - R_m)]
+
+        # Se quiser só a F_Obj, retorna
+        if tipo == 1
+            return valor_fun, valor_res, [valor_fun1;valor_fun2;real(Ep/Ec)]
+
+            # Função Lagrangiana
+        elseif tipo == 2
+
+            L = 0.0
+            for j=1:size(valor_res,1)
+                L = L + max(0.0, mult_res[j] + valor_res[j]/rho)^2.0
+            end
+
+            L = valor_fun + rho*L/2.0
+
+            return L
+
+      # Calculo da derivada
+        elseif tipo == 3
+
+            # Inicializa a derivada interna
+            dL = zeros(Float64,nel)
+
+            # Valor para correção da derivada
+            corr_min = 1.0 - vmin
+
+            # Derivada da restrição de Volume Normalizada (1.0-0.49), 58
+            dVdx = 1.0/NX/NY/0.51
+
+            # Problema adjunto de R
+            aux_R = 0.5*((Ec/(Ep^2.0))*KG*conj(UD) - ((w^2.0)/Ep)*MG*conj(UD))
+
+            adj_R = vec(lufact(KD)\aux_R)
+
+            # Parte da derivada referente a restrição de volume
+            dL1 = max(0.0, mult_res[1] + rho*valor_res[1])*dVdx
+
+            # Parte da derivada referente a restrição do R (falta dRdx)
+            dL2 = max(0.0, mult_res[2] + rho*valor_res[2])
+
+            # Varre os elementos
+            @inbounds for j=1:nel
+
+                # Localiza deslocamentos e lambdas
+                nos_ele = ijk[j,:]
+
+                # Zera Ue, complexo para cálculos Harmônicos
+                USe = zeros(8)
+                UDe = zeros(Complex,8)
+                adj_Re = zeros(Complex,8)
+
+                # Busca o U dos nós não restritos
+                for k=1:4
+                    no_k = nos_ele[k]
+                    gdli = ID[no_k,1]
+                    gdlj = ID[no_k,2]
+                    if gdli != 0
+                        UDe[2*k-1] = UD[gdli]
+                        USe[2*k-1] = US[gdli]
+                        adj_Re[2*k-1] = adj_R[gdli]
+                    end
+                    if gdlj != 0
+                        UDe[2*k] = UD[gdlj]
+                        USe[2*k] = US[gdlj]
+                        adj_Re[2*k] = adj_R[gdlj]
+                    end
+                end #k
+
+                # derivada das matrizes de rigidez e massa 109, corrigida
+                dKedx  = corr_min*SP*xf[j]^(SP-1.0)*K0
+
+                # Correção Olhoff & Du, 91 + Correção do valor minimo
+                dMedx = corr_min*M0
+
+                if xf[j] < 0.1
+                    dMedx = (36E5*xf[j]^5.0 - 35E6*xf[j]^6.0)*dMedx
+                end
+
+                # Derivada da matriz dinamica
+                dKDedx = dKedx*(1.0+im*w*beta) + dMedx*(-w^2.0+im*w*alfa)
+
+                # Derivada da Potencia Ativa
+                dPdx = -0.5*w*real(transpose(UDe)*dKDedx*UDe*im)/Y0[1]
+
+                # Derivada da flexibilidade estática
+                dSdx = 0.5*real( -transpose(USe)*dKedx*USe )/Y0[2]
+
+                # Derivada do R
+                dRdx_1 = +(0.25*(w^2.0)/Ep)*(adjoint(UDe)*dMedx*UDe)
+                dRdx_2 = -(0.25*Ec/(Ep^2.0))*(adjoint(UDe)*dKedx*UDe)
+                dRdx_3 = +real(transpose(adj_Re)*(dKDedx*UDe))
+
+                # Derivada do R corrigida
+                dRdx = (1.0/(log(10.0)*R))*real((dRdx_1 + dRdx_2 + dRdx_3))
+
+                # Derivada do LA
+                dL[j] = A*dPdx + B*dSdx + dL1 +  dL2*dRdx
 
             end #j
 

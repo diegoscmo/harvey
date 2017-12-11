@@ -224,10 +224,10 @@ function Kquad4_I(elem::Int64, coordx::Array{Float64,2}, conect::Array{Int64,2},
     elast::Float64, poiss::Float64, espess::Float64)
 
     # Define os arrays locais
-    B    = Array{Float64}(uninitialized,3,12)
+    B    = zeros(3,12)
     nos  = Array{Float64}(uninitialized,2,4)
-    K    = Array{Float64}(uninitialized,8,8)
-    K_I  = Array{Float64}(uninitialized,12,12)
+    K    = zeros(8,8)
+    K_I  = zeros(12,12)
     DJ = 0.0
 
     # Determina as coordxenadas dos nós
@@ -239,18 +239,18 @@ function Kquad4_I(elem::Int64, coordx::Array{Float64,2}, conect::Array{Int64,2},
     # tabela de pontos de Gauss
     valor = 1.0/sqrt(3.0)
     gpoint = [ -valor    valor     valor   -valor ;
-    -valor   -valor     valor    valor ]
+               -valor   -valor     valor    valor ]
 
     # Agora define o tensor constitutivo EPT
     com = (elast/(1.0-poiss^2));
     De = [  com          com*poiss   0.0 ;
-    com*poiss    com         0.0 ;
-    0.0          0.0         com*(1.0-poiss)/2.0 ]
+            com*poiss    com         0.0 ;
+            0.0          0.0         com*(1.0-poiss)/2.0 ]
 
     # Integra numericamente com 4 pontos de Gauss
     for p=1:4
         (B,DJ) = Bquad4_I(gpoint[1,p],gpoint[2,p],nos)
-        K_I = K_I + (B'*De*B)*DJ;
+        K_I .= K_I + (transpose(B)*De*B)*DJ;
     end
 
     # Incompatível
@@ -264,17 +264,15 @@ function Kquad4_I(elem::Int64, coordx::Array{Float64,2}, conect::Array{Int64,2},
     K = K*espess
 
     # Fim da funcao Kquad4
-    return K,Kaa,Kau
+    return K
 
 end #Kquad4
 
 function Bquad4_I(r::Float64,s::Float64,nos::Array{Float64,2})
 
     # Criando matrizes necessarias
-    J    = Array{Float64}(uninitialized,2,2)
-    invJ = Array{Float64}(uninitialized,2,2)
     DN   = Array{Float64}(uninitialized,2,6)
-    B    = Array{Float64}(uninitialized,3,12)
+    B    = zeros(3,12)
 
     #DN eh a matriz com as derivadas da funcao de forma em relacao a r e s
     DN[1,1] = (-1.0+s)/4.0

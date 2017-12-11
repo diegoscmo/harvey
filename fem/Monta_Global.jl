@@ -1,9 +1,7 @@
 function Global_KM(densidades::Array{Float64,1}, nelems::Int64, ijk::Array{Int64,2},
                    ID::Array{Int64,2},
                    K0::Array{Float64,2},
-                   #K0::StaticArrays.SArray{Tuple{8,8},Float64,2,64},
                    M0::Array{Float64,2},
-                   #M0::StaticArrays.SArray{Tuple{8,8},Float64,2,64},
                      simp::Float64, vminimo::Float64)
 
     # Corrige os fatores densidade para a massa (Olhoff e Du)
@@ -12,7 +10,7 @@ function Global_KM(densidades::Array{Float64,1}, nelems::Int64, ijk::Array{Int64
     # Corrige massa de acordo com Olhoff & Du
     for j=1:nelems
         if massadens[j] < 0.1
-            massadens[j] = 6.0E5*massadens[j]^6.0 - 5.0E6*massadens[j]^7.0
+            massadens[j] = 6E5*massadens[j]^6.0 - 5E6*massadens[j]^7.0
         end #if dens[i]
     end #for i
 
@@ -31,13 +29,13 @@ function Global_KM(densidades::Array{Float64,1}, nelems::Int64, ijk::Array{Int64
      for el = 1:nelems
         # rotina para determinacao dos vetores para montagem da matriz esparsa
         # Modificação Olhoff & Du pag 94/95 eq 5.19-20
-        kfator::Float64 = densidades[el]^simp
-        mfator::Float64 = massadens[el]
+        kfator = densidades[el]^simp
+        mfator = massadens[el]
         (glg,gll) = gl_livres_elemento(el,ijk,ID)
-         @inbounds @simd for i = 1:length(glg)
+         @inbounds for i = 1:length(glg)
                         glgi =  glg[i]
                         glli =  gll[i]
-                        @inbounds @simd for j = 1: length(glg)
+                        @inbounds for j = 1: length(glg)
                                   glgj =  glg[j]
                                   gllj =  gll[j]
                                   # Monta só a parte superior
@@ -48,6 +46,7 @@ function Global_KM(densidades::Array{Float64,1}, nelems::Int64, ijk::Array{Int64
                                      # Corrige o valor mínimo na montagem da matriz
        	                             V[contador] = (vminimo + kfator*vsuper)*K0[glli,gllj]
                                      W[contador] = (vminimo + mfator*vsuper)*M0[glli,gllj]
+                                     
                                      contador = contador + 1
                                 #end # if U
                         end #j

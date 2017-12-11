@@ -1,38 +1,36 @@
 # Diferenças Finitas para validação!
 
-function Sensibilidade(x::Array{Float64,1}, valor_res::Array{Float64,1}, mult_res::Array{Float64,1},
-                       rho::Float64, fem_v, fem_f, filt)
+function DF(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, tipo::Int64,
+                                      nel::Int64, ijk::Array{Int64,2}, ID::Array{Int64,2}, K0::Array{Float64,2},
+                                      M0::Array{Float64,2}, SP::Float64, vmin::Float64, F::Array{Float64,1},
+                                      NX::Int64, NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1},
+                                      dviz::Array{Float64,2}, raiof::Float64, Y0::Array{Float64,1}, L0, caso, freq, alfa, beta, A, Ye)
 
     # Step para as diferenças finitas
     h = 3.0*sqrt(eps())
 
-    # Só para não precisar pegar de fora...
-    numvar = size(x,1)
-
     # Declara
-    dL = zeros(Float64,numvar)
+    dL = Array{Float64}(uninitialized,nel)
 
-    # Diferenças finitas à frente
+    # Gradiente em cada direção
+    @inbounds for i=1:nel
+        b = x[i]
+        x[i] = b + h
+        L = F_Obj(x, rho, mult_res, 2, nel, ijk, ID, K0, M0, SP, vmin,
+                                     F, NX, NY, vizi, nviz, dviz, raiof, Y0,
+                                     caso, freq, alfa, beta, A, Ye)
+        dL[i] = (L - L0)/h
 
-        # Valor da funcao Lagrangiana no ponto x
-        #L0 = F_Lagrangiana(x, mult_res, rho, fem_v, fem_f)
+        #x[i] = b - h
+        #L0 = F_Obj(x, rho, mult_res, 2, nel, ijk, ID, K0, M0, SP, vmin,
+        #                             F, NX, NY, vizi, nviz, dviz, raiof, Y0,
+        #                             caso, freq, alfa, beta, A, Ye)
+        #dL[i] = (L - L0)/(2.0*h)
 
-        # Gradiente em cada direção
-        dL = zeros(size(x,1))
-        for i=1:numvar
-            b = x[i]
-            x[i] = b + h
-            L = F_Lagrangiana(x, mult_res, rho, fem_v, fem_f)
-            #dL[i] = (L - L0)/h
+        x[i] = b
+    end
 
-            x[i] = b - h
-            L0 = F_Lagrangiana(x, mult_res, rho, fem_v, fem_f)
-            dL[i] = (L - L0)/(2.0*h)
-
-            x[i] = b
-        end
-
-    dL = Derivada_Filtro(dL, filt)
+    dL = dL_Dens(dL, nel, vizi, nviz, dviz, raiof)
 
     return dL
 end

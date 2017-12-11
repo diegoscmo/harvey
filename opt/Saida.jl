@@ -16,14 +16,14 @@ function Imprime_Int(i_int::Int64, contaev::Int64, norma::Float64, dts, tmp)
 end
 
 function Imprime_Ext(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1},
-                     valor_fun::Float64, valor_res::Array{Float64,1}, i_ext::Int64, dts::String, nel::Int64)
-                     #vizi::Array{Int64,2},nviz::Array{Int64,1},dviz::Array{Float64,2},raiof::Float64)
+                     valor_fun::Float64, valor_res::Array{Float64,1}, i_ext::Int64,
+                     dts::String, nel::Int64,to_plot::Array{Float64,1})
 
     vol = mean(x)
 
     # Displau dos valores atuais
     @printf("\n  iter: %d \torigin. fitness: %.6e\tvolume:\t%.5f ", i_ext, valor_fun, vol)
-    @printf("\n  rho: %.4f", rho)
+    @printf("\n  rho: %.3f", rho)
     @printf(" \tmults. lagrange: ")
     show(mult_res);
     @printf("\n\t\tval. restrições: ")
@@ -41,7 +41,7 @@ function Imprime_Ext(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,
         saida2 = open(file2,"a")
 
         @printf(saida,"\n  iter: %d \torigin. fitness: %.6e\tvolume:\t%.5f ", i_ext, valor_fun, vol)
-        @printf(saida,"\n  rho: %.4f", rho)
+        @printf(saida,"\n  rho: %.3f", rho)
         @printf(saida," \tmults. lagrange: ")
         show(saida,mult_res);
         @printf(saida,"\n\t\tval. restrições: ")
@@ -49,10 +49,15 @@ function Imprime_Ext(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,
         @printf(saida,"\n")
 
         #Fobj e volume
-        if size(mult_res,1) == 2
-            println(saida2,valor_fun," ",vol," ",valor_res[1]," ",valor_res[2]," ",rho," ", mult_res[1]," ",mult_res[2])
-        else
-            println(saida2,valor_fun," ",vol," ",valor_res[1]," ",rho," ", mult_res[1])
+
+        s_fobj = size(to_plot,1)
+
+        if s_fobj == 1
+            println(saida2,to_plot[1]," ",vol)
+        elseif s_fobj == 2
+            println(saida2,to_plot[1]," ",to_plot[2]," ",vol)
+        elseif s_fobj == 3
+            println(saida2,to_plot[1]," ",to_plot[2]," ",to_plot[3]," ",vol)
         end
 
         close(saida)
@@ -69,7 +74,7 @@ end
 function Imprime_0(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1},
                      valor_fun::Float64, valor_res::Array{Float64,1}, max_ext::Int64, max_int::Int64,
                      tol_ext::Float64, tol_int::Float64, dts::String, nnos::Int64,
-                      nel::Int64, ijk::Array{Int64,2}, coord::Array{Float64,2})
+                      nel::Int64, ijk::Array{Int64,2}, coord::Array{Float64,2},to_plot::Array{Float64})
                       #vizi::Array{Int64,2},nviz::Array{Int64,1},dviz::Array{Float64,2},raiof::Float64)
 
     println("\n  LagAug:: ",dts)
@@ -97,7 +102,6 @@ function Imprime_0(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}
         end
 
         saida  = open(file1,"a")
-        saida2 = open(file2,"a")
 
         # Imprime malha no gmsh
         Inicializa_Malha_Gmsh(fmesh, nnos, nel, ijk, coord, 2)
@@ -106,13 +110,11 @@ function Imprime_0(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}
         println(saida,"\n  Nelems:: ",nel," | Iter:: ",max_ext,"/",max_int," | Tol:: ",tol_ext,"/",tol_int)
         close(saida)
 
-        println(saida2, "valor_fun\tvol\tvalor_res\trho\tmult_res")
-        close(saida2)
     end
 
 
 
-    Imprime_Ext(x, rho, mult_res, valor_fun, valor_res, 0, dts, nel)#, vizi, nviz, dviz, raiof)
+    Imprime_Ext(x, rho, mult_res, valor_fun, valor_res, 0, dts, nel,to_plot)#, vizi, nviz, dviz, raiof)
 
 end
 
