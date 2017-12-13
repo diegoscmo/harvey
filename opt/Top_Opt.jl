@@ -62,14 +62,14 @@ function Top_Opt(num::Int64, caso::Int64, freq::Float64, alfa::Float64,
     # Restrições de deslocamento (apoios):
     #        [ ponto_X_inicial ponto_Y_inicial ponto_X_final ponto_Y_final direção (X=1 Y=2)]
     presos = [  0.0             0.0             0.0           LY           1       ;
-                0.0             0.0             0.0           LY           2       ;#]
-                LX              0.0             LX            LY           1       ;
-                LX              0.0             LX            LY           2       ]
+                0.0             0.0             0.0           LY           2       ]
+#                LX              0.0             LX            LY           1       ;
+#                LX              0.0             LX            LY           2       ]
 
     # Carregamentos:
     #               [ ponto_X        ponto_Y         força           dir (X=1 Y=2)]
-    #forcas = [ LX              LY/2.0          -9000.0         2 ]
-    forcas = [ LX/2.0              0.0          -9000.0         2 ]
+    forcas = [ LX              LY/2.0          -9000.0         2 ]
+    #forcas = [ LX/2.0              0.0          -9000.0         2 ]
 
     # Nós e elementos
     nnos = (NX+1)*(NY+1)             # Nr. de nós

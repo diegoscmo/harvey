@@ -22,24 +22,25 @@ include("opt\\Saida.jl")            # Impressão das saídas em arquivo e consol
 include("opt\\Dif_Fin.jl")
 
 # Carrega cálculo da Fobj, Lagrangiana e derivadas, selecionar um
-include("fobj\\1_Estatico.jl")
+#include("fobj\\1_Estatico.jl")
 #include("fobj\\2_Dinamico.jl")
 #include("fobj\\3_Din_R-Est.jl")
 #include("fobj\\4_Din_A-Est.jl")
-#include("fobj\\5_Potencia.jl")
+include("fobj\\5_Potencia.jl")
 #include("fobj\\6_Pot_R-Est.jl")
 #include("fobj\\7_Pot_A-Est.jl")
 #include("fobj\\8_Pot_A-Est_R-R.jl")
+#include("fobj\\0_Todas_Fobj.jl")
 
 function main()
     # Parâmetros Harmônica / Fobj
-    num         = 0
+    num         = 6
     caso        = 0
-    freq        = 600.0
+    freq        = 180.0
     alfa        = 0.0
     beta        = 0.1/(2.0*pi*freq)
-    A           = 0.99
-    Ye          = 1.0
+    A           = 0.00
+    Ye          = 1.5
     dini        = 0.49
 
     if alfa == 666.6

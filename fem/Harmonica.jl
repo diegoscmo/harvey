@@ -75,7 +75,7 @@ function Verifica_Eig(K,M)
     auto_vals = sqrt.(real(AVL[1]))/2.0/pi
     auto_vets = AVL[2]
 
-    println(auto_vals')
+    #println(auto_vals')
     for i=1:(n-1)
 
         #teste = transpose(auto_vets[i]).*auto_vets[i+1]
