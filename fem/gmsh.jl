@@ -1,3 +1,6 @@
+################################################################################
+#####                                GMSH                                 ######
+################################################################################
 #
 # Cria o cabecalho com informacoes da malha
 # para posterior adicao de vistas com saidas
@@ -6,7 +9,6 @@ function Inicializa_Malha_Gmsh(nome_arquivo::String,nnos,nelems,conec,coord,dime
 
     # Abre o arquivo para escrita
     saida = open(nome_arquivo,"w")
-
 
     # Cabecalho do gmsh
     println(saida,"\$MeshFormat")
@@ -240,11 +242,15 @@ function Mapeia_Nos_ConsistenteQuad(tensoes)
 
     # Esta matriz foi obtida no maxima e os cálculos estão
     # na pasta de documentação.
-    invA  = [1.866025403784438 -0.5 0.1339745962155612 -0.5;
-                  -0.5 1.866025403784438 -0.5 0.1339745962155612;
-                   0.1339745962155612 -0.5 1.866025403784438 -0.5;
-                  -0.5 0.1339745962155612 -0.5 1.866025403784438]
 
+    c1 = 1.866025403784438
+    c2 = -0.5
+    c3 = 0.1339745962155612
+
+    invA  = [   c1 c2 c3 c2 ;
+                c2 c1 c2 c3 ;
+                c3 c2 c1 c2 ;
+                c2 c3 c2 c1 ]
 
     # e calcula os valores nodais
     S = invA*tensoes
@@ -301,7 +307,10 @@ function Adiciona_Vista_Nodal_Tensor_Gmsh(nome_arquivo::AbstractString,nelems,no
     for i=1:nelems
 
             # extrai as tensoes deste elemento
-            tensoes_elemento = valores[4*(i-1)+1:4*(i-1)+4,:]
+#           tensoes_elemento = valores[4*(i-1)+1:4*(i-1)+4,:]
+
+            tensoes_elemento = vcat(transpose(valores[i,1:3]),transpose(valores[i,4:6]),
+                                  transpose(valores[i,7:9]),transpose(valores[i,10:12]))
 
             texto = Mapeia_Nos_ConsistenteQuad(tensoes_elemento)
             println(saida,i," 4 ", texto)

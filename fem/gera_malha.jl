@@ -1,3 +1,10 @@
+################################################################################
+#####                          Geração da Malha                           ######
+################################################################################
+
+#
+#
+#
 function GeraMalha(nnos::Int64, nelems::Int64, LX::Float64, LY::Float64, NX::Int64, NY::Int64,
                    presos::Array{Float64,2}, forcas::Array{Float64,2})
 
@@ -164,7 +171,6 @@ function gl_livres_elemento(elemento::Int64,ijk::Array{Int64,2},ID::Array{Int64,
 
     # graus de liberdade globais
     glg = zeros(Int64,8)
-
 
     contador_local::Int64 = 1
     contador_global::Int64 = 1

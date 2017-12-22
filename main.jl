@@ -1,54 +1,67 @@
 ################################################################################
-# Lagrangiano Aumentado // Otimização Topológica
+###           Lagrangiano Aumentado // Otimização Topológica                 ###
 ################################################################################
 
-# Copiar para o console para executar:
-# cd(ENV["HARVEY"]);
-# include("main.jl"); main();
+# using Printf
+# cd(ENV["HARVEY"]); include("main.jl"); main();
 
-# Carrega os arquivos com as rotinas de elementos finitos
-include("fem\\Gera_Malha.jl")       # GeraMalha, gl_livres_elemento
-include("fem\\Quad4.jl")            # Kquad4, Kquad4_I
-include("fem\\Monta_Global.jl")     # Global, Expande_Vetor
-include("fem\\Gmsh.jl")             # Funções GMSH
-include("fem\\Harmonica.jl")         # Cálculo Harmônico
+# Carrega rotinas
+include("fem\\Rotinas_Fem.jl")      # Rotinas de Elementos Finitos
+include("opt\\Top_Opt.jl")          # Rotinas de LA e Topológica
+include("fobj\\0_Todas_Fobj.jl")    # Funções Objetivo
 
-# Carrega os arquivos com métodos as rotinas para otimização
-include("opt\\Top_Opt.jl")
-include("opt\\Steepest.jl")         # Método de Descida, Steepest
-include("opt\\Wall_Search.jl")      # Procura em linha, Wall_Search
-include("opt\\Filtros.jl")          # Filtros de densidades e sensibilidades
-include("opt\\Saida.jl")            # Impressão das saídas em arquivo e console
-include("opt\\Dif_Fin.jl")
-
-# Carrega cálculo da Fobj, Lagrangiana e derivadas, selecionar um
-#include("fobj\\1_Estatico.jl")
-#include("fobj\\2_Dinamico.jl")
-#include("fobj\\3_Din_R-Est.jl")
-#include("fobj\\4_Din_A-Est.jl")
-include("fobj\\5_Potencia.jl")
-#include("fobj\\6_Pot_R-Est.jl")
-#include("fobj\\7_Pot_A-Est.jl")
-#include("fobj\\8_Pot_A-Est_R-R.jl")
-#include("fobj\\0_Todas_Fobj.jl")
-
+#
+# Entrada de dados + execução da rotina
+#
 function main()
-    # Parâmetros Harmônica / Fobj
-    num         = 6
-    caso        = 0
-    freq        = 180.0
-    alfa        = 0.0
-    beta        = 0.1/(2.0*pi*freq)
-    A           = 0.00
-    Ye          = 1.5
-    dini        = 0.49
 
-    if alfa == 666.6
-        alfa = 0.8*(2.0*pi*freq)
-    end
-    if beta == 666.6
-        beta = 0.1/(2.0*pi*freq)
-    end
+    # Nome do Arquivo
+    dts = "Teste"
 
-    Top_Opt(num, caso, freq, alfa, beta, Ye, A, dini)
+    # Parâmetros da Função Objetivo
+    caso        = 11        # Seleciona o caso (ver Fobjs)
+    freq        = 100.0     # Frequência de excitação
+    alfa        = 0.0       # Amortecimento Proporcional - Massa
+    beta        = 1E-8      # Amortecimento Proporcional - Rigidez
+    A           = 1.0       # Peso da primeira Fobj
+    Ye          = 1.0       # Porcentagem da restrição (Est ou R)
+    dini        = 0.49      # Volume inicial
+
+    # Parâmetros do Lagrangiano Aumentado
+    max_ext     = 30        # Máximo de iteracoes externas
+    max_int     = 500       # Máximo de iterações internas
+    tol_ext     = 1E-6      # Tolerância do laço externo
+    tol_int     = 1E-6      # Tolerância do laço interno
+    rho         = 1.00      # Valor inicial de rho
+    rho_max     = 2.50      # Valor maximo de rho
+    mult_max    = 10.0      # Valor maximo dos multiplicadores
+
+    # Parâmetros da topológica
+    SP          = 3.00      # Parametro p do SIMP
+    raiof       = 0.031     # Tamanho do filtro [m]
+    vmin        = 1E-9      # Densidade mínima
+
+    # Parâmetros do problema de FEM, 60x30 = 1800 // 140x70 = 9800
+    NX          = 60       # Nr. de elementos em X
+    NY          = 30        # Nr. de elementos em Y
+    LX          = 1.0       # Comprimento em X
+    LY          = 0.5       # Comprimento em Y
+    young       = 210E9     # Módulo de Young
+    poisson     = 0.0       # Coeficiente de Poisson
+    esp         = 1.0       # Espessura do retângulo
+    p_dens      = 7860.0    # Densidade
+
+    # Restrições de deslocamento (apoios):
+    #        [ ponto_X0 ponto_Y0    ponto_XF    ponto_YF    dir (X=1 Y=2)]
+    presos = [  0.0     0.0         0.0         LY          1 ;
+                0.0     0.0         0.0         LY          2 ]
+
+    # Carregamentos:
+    #        [ ponto_X  ponto_Y     força       dir (X=1 Y=2)]
+    forcas = [ LX       LY/2.0      -9000.0     2 ]
+
+    # Executa.
+    Top_Opt(dts, caso, freq, alfa, beta, Ye, A, dini, max_ext, max_int, tol_ext,
+               tol_int, rho, rho_max, mult_max, SP, raiof, vmin, NX, NY, LX, LY,
+                                    young, poisson, esp, p_dens, presos, forcas)
 end

@@ -1,4 +1,8 @@
-    function Harmonica(dts::String, f_ini::Float64 ,f_delta::Float64 ,f_fim::Float64,
+################################################################################
+#####                          Análise Harmônica                          ######
+################################################################################
+
+function Harmonica(dts::String, f_ini::Float64 ,f_delta::Float64 ,f_fim::Float64,
                     alfa::Float64, beta::Float64, nel::Int64, ijk::Array{Int64,2},
                     ID::Array{Int64,2}, K0::Array{Float64,2}, M0::Array{Float64,2},
                     SP::Float64, vmin::Float64, F::Array{Float64,1}, vizi::Array{Int64,2},

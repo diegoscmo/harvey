@@ -1,79 +1,27 @@
 ################################################################################
-# Lagrangiano Aumentado // Otimização Topológica
+###           Lagrangiano Aumentado // Otimização Topológica                 ###
 ################################################################################
 
-# Rotina principal
-function Top_Opt(num::Int64, caso::Int64, freq::Float64, alfa::Float64,
-                        beta::Float64, Ye::Float64, A::Float64, dini::Float64)
+# Carrega os arquivos com métodos as rotinas para otimização
+include("Steepest.jl")         # Método de Descida, Steepest
+include("Wall_Search.jl")      # Procura em linha, Wall_Search
+include("Filtros.jl")          # Filtros de densidades e sensibilidades
+include("Saida.jl")            # Impressão das saídas em arquivo e console
+include("Dif_Fin.jl")          # Diferenças finitas, caso precise fazer validação
 
-    # Nome do Arquivo ou data de execução("OFF desliga")
-    dts = ""
-    if caso == 0
-        dts = "Teste"
-    elseif caso == 1
-        dts = string(num,"_",caso)
-    elseif caso == 2
-        dts = string(num,"_",caso,"_f",freq)
-    elseif caso == 3
-        dts = string(num,"_",caso,"_f",freq,"_Y",Ye)
-    elseif caso == 4
-        dts = string(num,"_",caso,"_f",freq,"_A",A)
-    elseif caso == 5
-        dts = string(num,"_",caso,"_f",freq)
-    elseif caso == 6
-        dts = string(num,"_",caso,"_f",freq,"_Y",Ye)
-    elseif caso == 7
-        dts = string(num,"_",caso,"_f",freq,"_A",A)
-    elseif caso == 8
-        dts = string(num,"_",caso,"_f",freq,"_A",A,"_R",Ye)
-    else
-        error("ERRO NO CASO")
-    end
+#
+# Rotina principal, recebe parâmetros e executa a otimização topológica com LA
+#
+function Top_Opt(dts::AbstractString, caso::Int64, freq::Float64, alfa::Float64,
+      beta::Float64, Ye::Float64, A::Float64, dini::Float64, max_ext::Int64, max_int::Int64,
+      tol_ext::Float64, tol_int::Float64, rho::Float64, rho_max::Float64, mult_max::Float64,
+              SP::Float64, raiof::Float64, vmin::Float64, NX::Int64, NY::Int64, LX::Float64,
+                                LY::Float64, young::Float64, poisson::Float64, esp::Float64,
+                        p_dens::Float64, presos::Array{Float64,2}, forcas::Array{Float64,2})
 
-    # Parâmetros do Lagrangiano Aumentado
-    max_ext     = 30       # Máximo de iteracoes externas
-    max_int     = 500       # Máximo de iterações internas
-    tol_ext     = 1E-6      # Tolerância do laço externo
-    tol_int     = 1E-6      # Tolerância do laço interno
-    rho         = 1.00      # Valor inicial de rho
-    rho_max     = 2.50      # Valor maximo de rho
-    mult_max    = 10.0      # Valor maximo dos multiplicadores
-
-    # Parâmetros da topológica
-    dens_ini    = dini      # Volume/Pseudo-densidades iniciais
-    SP          = 3.00      # Parametro p do SIMP
-    raiof       = 0.031     # Tamanho do filtro [m]
-    vmin        = 0.001     # 1%
-
-    # Parâmetros do problema de FEM, 60x30 = 1800
-    NX = 60              # Nr. de elementos em X
-    NY = 30              # Nr. de elementos em Y
-
-    # Definição geométrica do problema (retângulo):
-    LX = 1.0       # Comprimento em X
-    LY = 0.5       # Comprimento em Y
-
-    # Material:
-    young   = 210E9     # Módulo de Young
-    poisson = 0.0       # Coeficiente de Poisson (0.0 > viga)
-    esp     = 1.0       # Espessura do retângulo
-    p_dens  = 7860.0    # Densidade
-
-    # Restrições de deslocamento (apoios):
-    #        [ ponto_X_inicial ponto_Y_inicial ponto_X_final ponto_Y_final direção (X=1 Y=2)]
-    presos = [  0.0             0.0             0.0           LY           1       ;
-                0.0             0.0             0.0           LY           2       ]
-#                LX              0.0             LX            LY           1       ;
-#                LX              0.0             LX            LY           2       ]
-
-    # Carregamentos:
-    #               [ ponto_X        ponto_Y         força           dir (X=1 Y=2)]
-    forcas = [ LX              LY/2.0          -9000.0         2 ]
-    #forcas = [ LX/2.0              0.0          -9000.0         2 ]
-
-    # Nós e elementos
-    nnos = (NX+1)*(NY+1)             # Nr. de nós
-    nel  = NX*NY                     # Nr. de elementos
+    # Cálcula número de nós e elementos
+    nnos = (NX+1)*(NY+1)
+    nel  = NX*NY
 
     # Gera a malha
     coord, ijk, nos_f, ID, gdll = GeraMalha(nnos, nel, LX, LY, NX, NY, presos, forcas)
@@ -81,46 +29,47 @@ function Top_Opt(num::Int64, caso::Int64, freq::Float64, alfa::Float64,
     # Gera array com as forças
     F =  Global_F(ID, nos_f, gdll)
 
-    # Gera a matrizes de rigidez e massa de um elemento e transforma para StaticArrays
-    K0 = Kquad4_I(1, coord, ijk, young, poisson, esp)
+    # Gera a matrizes de rigidez e massa de um elemento, junto com a CBA para tensões
+    K0, CBA = Kquad4_I(1, coord, ijk, young, poisson, esp)
     M0 = Mquad4(1, coord, ijk, esp, p_dens)
 
-    # Prepara os vizinhos para filtros 63
+    # Prepara os vizinhos para filtros
     vizi, nviz, dviz = Proc_Vizinhos(nel, coord, ijk, raiof)
 
     # Pseudo-densidades para a montagem global com o SIMP
-    x = dens_ini*ones(nel)
+    x = dini*ones(nel)
 
     # Adquire valores iniciais se aplicável
-    valor_0 = F_Obj(x, 0.0, [0.0], 0, nel, ijk, ID, K0, M0, SP, vmin, F, NX, NY,
-                  vizi, nviz, dviz, raiof, [0.0], caso, freq, alfa, beta, A, Ye)
+    valor_0, = F_Obj(x, 0.0, [0.0], 0, nnos, nel, ijk, ID, K0, M0, SP, vmin, F, NX, NY,
+                  vizi, nviz, dviz, raiof, [0.0], caso, freq, alfa, beta, A, Ye, CBA)
 
     # Inicializa vetores e calcula para primeiro display
-    valor_fun, valor_res, to_plot = F_Obj(x, 0.0, [0.0], 1, nel, ijk, ID, K0, M0,
+    valor_fun, valor_res, to_plot, TS = F_Obj(x, 0.0, [0.0], 1, nnos, nel, ijk, ID, K0, M0,
                                     SP, vmin, F, NX, NY, vizi, nviz, dviz, raiof,
-                                          valor_0, caso, freq, alfa, beta, A, Ye)
+                                          valor_0, caso, freq, alfa, beta, A, Ye, CBA)
     numres = size(valor_res,1)
-    mult_res  = zeros(Float64,numres)
+    mult_res  = zeros(numres)
 
     # Calcula o criterio de atualizacao do c
     crho_ant = max.(0.,norm(max.(valor_res, -mult_res/rho)))
 
     # Prepara o plot e primeira saída
     Imprime_0(x, rho, mult_res, valor_fun, valor_res, max_ext, max_int, tol_ext,
-                                   tol_int, dts, nnos, nel, ijk, coord, to_plot)
+             tol_int, dts, nnos, nel, ijk, coord, to_plot, TS, vizi, nviz, dviz, raiof)
+
 
     # Inicia o laço externo do lagrangiano aumentado
     for i_ext=1:max_ext
 
-        # Soluciona o problema interno (e salva a derivada)
-        x, dL = Steepest(x, rho, mult_res, max_int, tol_int, nel, ijk, ID, K0, M0,
+        # Soluciona o problema interno e salva a derivada
+        x, dL = Steepest(x, rho, mult_res, max_int, tol_int, nnos, nel, ijk, ID, K0, M0,
                                      SP, vmin, F, NX, NY, vizi, nviz, dviz, raiof,
-                                      dts, valor_0, caso, freq, alfa, beta, A, Ye)
+                                      dts, valor_0, caso, freq, alfa, beta, A, Ye, CBA)
 
         # Verifica novos valores da função e restrições
-        valor_fun, valor_res, to_plot = F_Obj(x, 0.0, [0.0], 1, nel, ijk, ID, K0, M0,
+        valor_fun, valor_res, to_plot, TS = F_Obj(x, 0.0, [0.0], 1, nnos, nel, ijk, ID, K0, M0,
                                         SP, vmin, F, NX, NY, vizi, nviz, dviz, raiof,
-                                               valor_0, caso, freq, alfa, beta, A, Ye)
+                                               valor_0, caso, freq, alfa, beta, A, Ye, CBA)
 
         # Atualiza o valor o multiplicador das restricoes (u)
         mult_res = min.(mult_max, max.(rho*valor_res + mult_res, 0.0))
@@ -132,9 +81,10 @@ function Top_Opt(num::Int64, caso::Int64, freq::Float64, alfa::Float64,
         end # if
 
         # Imprime resultado atual e plota saida para o gmsh
-        Imprime_Ext(x, rho, mult_res, valor_fun, valor_res, i_ext, dts, nel, to_plot)
+        Imprime_Ext(x, rho, mult_res, valor_fun, valor_res, i_ext, dts,
+                                    nel, to_plot, TS, vizi, nviz, dviz, raiof)
 
-        # Verifica os criterios:
+        # Verifica os criterios de parada:
         if  norm(dL)                   <= tol_ext &&  # Condicao de gradiente
             norm(max.(valor_res, 0.0)) <= tol_ext &&  # Condicao de viabilidade
             norm(valor_res'*mult_res)  <  tol_ext     # Cond. de complementariedade
@@ -143,9 +93,9 @@ function Top_Opt(num::Int64, caso::Int64, freq::Float64, alfa::Float64,
 
     end # for i_ext
 
-    @printf("\n\tAnálise Harmônica...")
-    Harmonica(dts, 0.0, 2.0, 1000.0, alfa, beta, nel, ijk, ID, K0, M0, SP, vmin,
+    # Executa análise harmônica da configuração final
+    println("\n\tAnálise Harmônica...")
+    Harmonica(dts, 0.0, 2.5, 1000.0, alfa, beta, nel, ijk, ID, K0, M0, SP, vmin,
                                                      F, vizi, nviz, dviz, raiof)
-
-    @printf(" OK!\n")
+    println(" OK!\n")
 end

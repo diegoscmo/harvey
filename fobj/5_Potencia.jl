@@ -1,31 +1,39 @@
-# Define o Função Objetivo
-function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, tipo::Int64,
-               nel::Int64, ijk::Array{Int64,2}, ID::Array{Int64,2}, K0::Array{Float64,2},
+################################################################################
+#####                              Potência                               ######
+################################################################################
+
+#
+# Define o Função Objetivo de Potência
+#
+function F_Pot(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, tipo::Int64,
+               nnos::Int64, nel::Int64, ijk::Array{Int64,2}, ID::Array{Int64,2}, K0::Array{Float64,2},
                M0::Array{Float64,2}, SP::Float64, vmin::Float64, F::Array{Float64,1},
                NX::Int64, NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1},
                dviz::Array{Float64,2}, raiof::Float64, Y0::Array{Float64,1},
-               caso::Int64, freq::Float64, alfa::Float64, beta::Float64, A::Float64, Ye::Float64 )
-
-    # Parâmetros do problema dinãmico
-    w    = 2.0*pi*freq
+               caso::Int64, freq::Float64, alfa::Float64, beta::Float64, A::Float64, Ye::Float64, filtra::Bool=true )
 
     # Filtra o x antes de qualquer coisa
-    xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
+    if filtra
+        xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
+    else
+        xf = copy(x)
+    end
 
     # Monta matriz de rigidez e massa global, aqui é aplicado o SIMP
     KG, MG = Global_KM(xf, nel, ijk, ID, K0, M0, SP, vmin)
 
     # Resolve o sistema dinamico
+    w  = 2.0*pi*freq
     KD = sparse(KG + w*im*(alfa*MG + beta*KG) - (w^2.0)*MG)
     UD = vec(lufact(KD)\F)
 
+    # Potencia ativa e Pot Adaptada
     Pa   = 0.5*w*real(im*dot(F,UD))
-
     PadB = 100.0  + 10.0*log10(Pa)
 
     # Retorna valores zero
     if tipo == 0
-       return [PadB]
+       return [PadB],0.0,0.0
     end
 
     # Função objetivo, flexibilidade estática
@@ -36,20 +44,12 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
 
     # Se quiser só a F_Obj, retorna
     if tipo == 1
-
         return valor_fun, valor_res, [valor_fun]
 
-        # Função Lagrangiana
+    # Função Lagrangiana
     elseif tipo == 2
-
-        L = 0.0
-        for j=1:size(valor_res,1)
-            L = L + max(0.0, mult_res[j] + valor_res[j]/rho)^2.0
-        end
-
-        L = valor_fun + rho*L/2.0
-
-        return L
+        L = valor_fun + 0.5*rho*max(0.0, valor_res[1] + mult_res[1]/rho)^2.0
+        return L,0.0,0.0
 
   # Calculo da derivada
     elseif tipo == 3
@@ -66,34 +66,28 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
         # Parte da derivada referente a restrição de volume
         dL1 = max(0.0, mult_res[1] + rho*valor_res[1])*dVdx
 
+        # Expande o vetor de deslocamentos  (insere zeros)
+        UDx = Expande_Vetor(UD, nnos, ID, true)
+
         # Varre os elementos
         @inbounds for j=1:nel
 
-            # Localiza deslocamentos e lambdas
+            # Identifica nos do elemento
             nos_ele = ijk[j,:]
 
-            # Zera Ue, complexo para cálculos Harmônicos
+            # Aloca vetor local e preenche
             UDe = zeros(Complex,8)
-
-            # Busca o U dos nós não restritos
-            for k=1:4
-                no_k = nos_ele[k]
-                gdli = ID[no_k,1]
-                gdlj = ID[no_k,2]
-                if gdli != 0
-                    UDe[2*k-1] = UD[gdli]
-                end
-                if gdlj != 0
-                    UDe[2*k] = UD[gdlj]
-                end
-            end #k
+            for k = 1:4
+                nok        = nos_ele[k]
+                UDe[2*k-1] = UDx[2*nok-1]
+                UDe[2*k]   = UDx[2*nok]
+            end
 
             # derivada das matrizes de rigidez e massa 109, corrigida
             dKedx  = corr_min*SP*xf[j]^(SP-1.0)*K0
 
             # Correção Olhoff & Du, 91 + Correção do valor minimo
             dMedx = corr_min*M0
-
             if xf[j] < 0.1
                 dMedx = (36E5*xf[j]^5.0 - 35E6*xf[j]^6.0)*dMedx
             end
@@ -101,9 +95,8 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
             # Derivada da matriz dinamica
             dKDedx = dKedx*(1.0+im*w*beta) + dMedx*(-w^2.0+im*w*alfa)
 
-            # Derivada da Potencia Ativa
+            # Derivada da Potencia Ativa adaptada
             dPdx = -0.5*w*real(transpose(UDe)*dKDedx*UDe*im)
-
             dPBdx = (10.0/(log(10.0)*Pa))*dPdx/Y0[1]
 
             # Derivada do LA
@@ -116,7 +109,7 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
 
         #Verifica_Eig(KG,MG)
 
-        return dL
+        return dL,0.0,0.0
 
     end #tipo 3
 

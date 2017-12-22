@@ -1,8 +1,10 @@
+################################################################################
+#####                     Montagem da Matriz Global                       ######
+################################################################################
+
 function Global_KM(densidades::Array{Float64,1}, nelems::Int64, ijk::Array{Int64,2},
-                   ID::Array{Int64,2},
-                   K0::Array{Float64,2},
-                   M0::Array{Float64,2},
-                     simp::Float64, vminimo::Float64)
+                   ID::Array{Int64,2}, K0::Array{Float64,2}, M0::Array{Float64,2},
+                   simp::Float64, vminimo::Float64)
 
     # Corrige os fatores densidade para a massa (Olhoff e Du)
     massadens = copy(densidades)
@@ -46,7 +48,7 @@ function Global_KM(densidades::Array{Float64,1}, nelems::Int64, ijk::Array{Int64
                                      # Corrige o valor mínimo na montagem da matriz
        	                             V[contador] = (vminimo + kfator*vsuper)*K0[glli,gllj]
                                      W[contador] = (vminimo + mfator*vsuper)*M0[glli,gllj]
-                                     
+
                                      contador = contador + 1
                                 #end # if U
                         end #j
@@ -93,11 +95,16 @@ end
 # Rotina que expande um vetor global compactado (sem os gls restritos)
 # para um vetor com a dimensão global original e com 0.0 nas
 # posições restritas
-function Expande_Vetor(entrada, nnos, ID)
+function Expande_Vetor(entrada, nnos, ID, C::Bool=false)
 
    # Aloca o vetor de saida
    saida = zeros(2*nnos)
-   saida = complex(saida)
+
+   # Se for complexo...
+   if C == true
+       saida = complex(saida)
+   end
+
    # Loop pelas posicoes de ID, catando no vetor de entrada
    # a medida que ID permitir
    contador = 1

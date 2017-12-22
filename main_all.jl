@@ -6,24 +6,45 @@
 # cd(ENV["HARVEY"]);
 # include("main_all.jl"); main_all();
 
-# Carrega os arquivos com as rotinas de elementos finitos
-include("fem\\Gera_Malha.jl")       # GeraMalha, gl_livres_elemento
-include("fem\\Quad4.jl")            # Kquad4, Kquad4_I
-include("fem\\Monta_Global.jl")     # Global, Expande_Vetor
-include("fem\\Gmsh.jl")             # Funções GMSH
-include("fem\\Harmonica.jl")         # Cálculo Harmônico
-
-# Carrega os arquivos com métodos as rotinas para otimização
+# Carrega rotina de Otimização Topológica e auxiliáres
+include("fem\\Rotinas_Fem.jl")
 include("opt\\Top_Opt.jl")
-include("opt\\Steepest.jl")         # Método de Descida, Steepest
-include("opt\\Wall_Search.jl")      # Procura em linha, Wall_Search
-include("opt\\Filtros.jl")          # Filtros de densidades e sensibilidades
-include("opt\\Saida.jl")            # Impressão das saídas em arquivo e console
-
-# Carrega cálculo da Fobj, Lagrangiana e derivadas, selecionar um
 include("fobj\\0_Todas_Fobj.jl")
 
 function main()
+
+    # Parâmetros do Lagrangiano Aumentado
+    max_ext     = 30        # Máximo de iteracoes externas
+    max_int     = 500       # Máximo de iterações internas
+    tol_ext     = 1E-6      # Tolerância do laço externo
+    tol_int     = 1E-6      # Tolerância do laço interno
+    rho         = 1.00      # Valor inicial de rho
+    rho_max     = 2.50      # Valor maximo de rho
+    mult_max    = 10.0      # Valor maximo dos multiplicadores
+
+    # Parâmetros da topológica
+    SP          = 3.00      # Parametro p do SIMP
+    raiof       = 0.031     # Tamanho do filtro [m]
+    vmin        = 1E-9      # Densidade mínima
+
+    # Parâmetros do problema de FEM, 60x30 = 1800 // 140x70 = 9800
+    NX          = 140       # Nr. de elementos em X
+    NY          = 70        # Nr. de elementos em Y
+    LX          = 1.0       # Comprimento em X
+    LY          = 0.5       # Comprimento em Y
+    young       = 210E9     # Módulo de Young
+    poisson     = 0.0       # Coeficiente de Poisson
+    esp         = 1.0       # Espessura do retângulo
+    p_dens      = 7860.0    # Densidade
+
+    # Restrições de deslocamento (apoios):
+    #        [ ponto_X0 ponto_Y0    ponto_XF    ponto_YF    dir (X=1 Y=2)]
+    presos = [  0.0     0.0         0.0         LY          1 ;
+                0.0     0.0         0.0         LY          2 ]
+
+    # Carregamentos:
+    #        [ ponto_X  ponto_Y     força       dir (X=1 Y=2)]
+    forcas = [ LX       LY/2.0      -9000.0     2 ]
 
           #Num; Caso;   Freq;   Alfa;   Beta;   Ye/Rm;  A;      X0
     dsm = [
@@ -134,7 +155,7 @@ function main()
             105 8       100.0   0.0     666.6   1.001   -0.20   0.49
 ]
 
-    for i=45:45     #1:105
+    for i=30:30         #1:105
 
         num  = Int(dsm[i,1]);
         caso = Int(dsm[i,2]);
@@ -152,7 +173,29 @@ function main()
             beta = 0.1/(2.0*pi*freq)
         end
 
-        Top_Opt(num, caso, freq, alfa, beta, Ye, A, X0)
+        # Nome do Arquivo ou data de execução("OFF desliga")
+        dts = ""
+        if caso == 1
+            dts = string(num,"_",caso,"_n",nel)
+        elseif caso == 2
+            dts = string(num,"_",caso,"_f",freq,"_n",nel)
+        elseif caso == 3
+            dts = string(num,"_",caso,"_f",freq,"_Y",Ye,"_n",nel)
+        elseif caso == 4
+            dts = string(num,"_",caso,"_f",freq,"_A",A,"_n",nel)
+        elseif caso == 5
+            dts = string(num,"_",caso,"_f",freq,"_n",nel)
+        elseif caso == 6
+            dts = string(num,"_",caso,"_f",freq,"_Y",Ye,"_n",nel)
+        elseif caso == 7
+            dts = string(num,"_",caso,"_f",freq,"_A",A,"_n",nel)
+        elseif caso == 8
+            dts = string(num,"_",caso,"_f",freq,"_A",A,"_R",Ye,"_n",nel)
+        else
+            error("ERRO NO CASO")
+        end
+
+        Top_Opt(dts, caso, freq, alfa, beta, Ye, A, X0)
 
     end
     quit()

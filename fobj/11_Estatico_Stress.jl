@@ -5,12 +5,12 @@
 #
 # Define o Função Objetivo de Flexibilidade Estática
 #
-function F_Est(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, tipo::Int64,
-               nnos::Int64, nel::Int64, ijk::Array{Int64,2}, ID::Array{Int64,2}, K0::Array{Float64,2},
-               M0::Array{Float64,2}, SP::Float64, vmin::Float64, F::Array{Float64,1},
-               NX::Int64, NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1},
-               dviz::Array{Float64,2}, raiof::Float64, Y0::Array{Float64,1},
-               caso::Int64, freq::Float64, alfa::Float64, beta::Float64, A::Float64, Ye::Float64, filtra::Bool=true )
+function F_Est_S(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, tipo::Int64,
+     nnos::Int64, nel::Int64, ijk::Array{Int64,2}, ID::Array{Int64,2}, K0::Array{Float64,2},
+           M0::Array{Float64,2}, SP::Float64, vmin::Float64, F::Array{Float64,1}, NX::Int64,
+              NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2},
+            raiof::Float64, Y0::Array{Float64,1}, caso::Int64, freq::Float64, alfa::Float64,
+           beta::Float64, A::Float64, Ye::Float64, CBA::Array{Float64,3}, filtra::Bool=true)
 
     # Filtra o x antes de qualquer coisa
     if filtra
@@ -30,7 +30,7 @@ function F_Est(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
 
     # Retorna valor para primeira iteração
     if tipo == 0
-        return [Est],0.0,0.0
+        return [Est],0.0,0.0,0.0
     end
 
     # Função objetivo normalizada
@@ -41,7 +41,11 @@ function F_Est(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
 
     # Se quiser a função obj normalizada
     if tipo == 1
-        return valor_fun, valor_res, [valor_fun]
+
+        USx = Expande_Vetor(US, nnos, ID)
+        TS = Tquad4_I(xf, nel, SP, 2.8, ijk, CBA, USx)
+
+        return valor_fun, valor_res, [valor_fun], TS
 
     # Função Lagrangiana
     elseif tipo == 2
@@ -92,7 +96,7 @@ function F_Est(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
         # Corrige aplicando a derivada do x filtrado em relação ao x original
         dL = dL_Dens(dL, nel, vizi, nviz, dviz, raiof)
 
-        return dL,0.0,0.0
+        return dL,0.0,0.0,0.0
 
     end #tipo 3
 
