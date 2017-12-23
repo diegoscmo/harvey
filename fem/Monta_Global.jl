@@ -1,7 +1,9 @@
 ################################################################################
 #####                     Montagem da Matriz Global                       ######
 ################################################################################
-
+#
+#
+#
 function Global_KM(densidades::Array{Float64,1}, nelems::Int64, ijk::Array{Int64,2},
                    ID::Array{Int64,2}, K0::Array{Float64,2}, M0::Array{Float64,2},
                    simp::Float64, vminimo::Float64)

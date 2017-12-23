@@ -155,7 +155,12 @@ function main()
             105 8       100.0   0.0     666.6   1.001   -0.20   0.49
 ]
 
-    for i=30:30         #1:105
+    #CS = [1,2,3,4,5,6,7,33,45]
+    #CS = [52,53,54,55,58,61]
+    #CS = [62,65,68,69,70,73]
+    CS = [82,83,84,85,86]
+
+    for i in CS         #1:105
 
         num  = Int(dsm[i,1]);
         caso = Int(dsm[i,2]);
@@ -164,7 +169,7 @@ function main()
         beta = dsm[i,5];
         Ye   = dsm[i,6];
         A    = dsm[i,7];
-        X0   = dsm[i,8];
+        dini = dsm[i,8];
 
         if alfa == 666.6
             alfa = 0.8*(2.0*pi*freq)
@@ -175,6 +180,7 @@ function main()
 
         # Nome do Arquivo ou data de execução("OFF desliga")
         dts = ""
+        nel = (NX+1)*(NY+1)
         if caso == 1
             dts = string(num,"_",caso,"_n",nel)
         elseif caso == 2
@@ -195,7 +201,9 @@ function main()
             error("ERRO NO CASO")
         end
 
-        Top_Opt(dts, caso, freq, alfa, beta, Ye, A, X0)
+        Top_Opt(dts, caso, freq, alfa, beta, Ye, A, dini, max_ext, max_int, tol_ext,
+                   tol_int, rho, rho_max, mult_max, SP, raiof, vmin, NX, NY, LX, LY,
+                                        young, poisson, esp, p_dens, presos, forcas)
 
     end
     quit()

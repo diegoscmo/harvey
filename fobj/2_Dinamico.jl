@@ -114,7 +114,7 @@ function F_Din(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
         # Corrige aplicando a derivada do x filtrado em relação ao x original 65
         dL = dL_Dens(dL, nel, vizi, nviz, dviz, raiof)
 
-        Verifica_Eig(KG,MG)
+        #Verifica_Eig(KG,MG)
 
         return dL,0.0,0.0,0.0
 
