@@ -23,7 +23,8 @@ function Imprime_Ext(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,
                      dts::String, nel::Int64, to_plot::Array{Float64,1}, TS::Array{Float64,2},
                      vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2}, raiof::Float64)
 
-    vol = mean(x)
+    xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
+    vol = mean(xf)
 
     # Displau dos valores atuais
     @printf("\n  iter: %d \torigin. fitness: %.6e\tvolume:\t%.5f ", i_ext, valor_fun, vol)
@@ -68,8 +69,6 @@ function Imprime_Ext(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,
         close(saida)
         close(saida2)
         # Imprime GMSH
-
-        xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
 
         Adiciona_Vista_Escalar_Gmsh(fmesh, "x", nel, x, Float64(i_ext))
         Adiciona_Vista_Escalar_Gmsh(fmesh2, "xf", nel, xf, Float64(i_ext))

@@ -37,7 +37,7 @@ function F_Est_S(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, 
     valor_fun = Est / Y0[1]
 
     # Funções de restrição, volume normalizada
-    valor_res = [ (mean(x)-0.49)/0.51 ]
+    valor_res = [ (mean(xf)-0.49)/0.51 ]
 
     # Se quiser a função obj normalizada
     if tipo == 1

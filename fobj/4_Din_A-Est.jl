@@ -6,12 +6,12 @@
 # Define o Função Objetivo de Flexibilidade Dinâmica + Estática
 #
 function F_Din_A_Est(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, tipo::Int64,
-               nnos::Int64, nel::Int64, ijk::Array{Int64,2}, ID::Array{Int64,2}, K0::Array{Float64,2},
-               M0::Array{Float64,2}, SP::Float64, vmin::Float64, F::Array{Float64,1},
-               NX::Int64, NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1},
-               dviz::Array{Float64,2}, raiof::Float64, Y0::Array{Float64,1},
-               caso::Int64, freq::Float64, alfa::Float64, beta::Float64, A::Float64, Ye::Float64, filtra::Bool=true )
-
+         nnos::Int64, nel::Int64, ijk::Array{Int64,2}, ID::Array{Int64,2}, K0::Array{Float64,2},
+               M0::Array{Float64,2}, SP::Float64, vmin::Float64, F::Array{Float64,1}, NX::Int64,
+                  NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2},
+                raiof::Float64, Y0::Array{Float64,1}, caso::Int64, freq::Float64, alfa::Float64,
+               beta::Float64, A::Float64, Ye::Float64, CBA::Array{Float64,3}, filtra::Bool=true)
+               
     # Peso do problema dinâmico e estático
     B   = 1.0 - A
 
@@ -42,7 +42,7 @@ function F_Din_A_Est(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,
         Y0 = Array{Float64}(uninitialized,2)
         Y0[1] = Din
         Y0[2] = Est
-       return Y0,0.0,0.0
+       return Y0,0.0,0.0,0.0
     end
 
     # Função objetivo normalizada
@@ -51,16 +51,20 @@ function F_Din_A_Est(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,
     valor_fun = valor_fun1 + valor_fun2
 
     # Funções de restrição, volume normalizada
-    valor_res = [ (mean(x)-0.49)/0.51 ]
+    valor_res = [ (mean(xf)-0.49)/0.51 ]
 
     # Se quiser só a F_Obj, retorna
     if tipo == 1
-        return valor_fun, valor_res, [valor_fun1;valor_fun2]
+
+        UDx = real(Expande_Vetor(UD, nnos, ID, true))
+        TS = Tquad4_I(xf, nel, SP, 2.8, ijk, CBA, UDx)
+
+        return valor_fun, valor_res, [valor_fun1;valor_fun2],TS
 
     # Função Lagrangiana
     elseif tipo == 2
         L = valor_fun + 0.5*rho*max(0.0, valor_res[1] + mult_res[1]/rho)^2.0
-        return L,0.0,0.0
+        return L,0.0,0.0,0.0
 
     # Calculo da derivada
     elseif tipo == 3
@@ -127,7 +131,7 @@ function F_Din_A_Est(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,
         # Corrige aplicando a derivada do x filtrado em relação ao x original 65
         dL = dL_Dens(dL, nel, vizi, nviz, dviz, raiof)
 
-        return dL,0.0,0.0
+        return dL,0.0,0.0,0.0
 
     end #tipo 3
 

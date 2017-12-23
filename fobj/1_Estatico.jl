@@ -6,12 +6,12 @@
 # Define o Função Objetivo de Flexibilidade Estática
 #
 function F_Est(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, tipo::Int64,
-               nnos::Int64, nel::Int64, ijk::Array{Int64,2}, ID::Array{Int64,2}, K0::Array{Float64,2},
-               M0::Array{Float64,2}, SP::Float64, vmin::Float64, F::Array{Float64,1},
-               NX::Int64, NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1},
-               dviz::Array{Float64,2}, raiof::Float64, Y0::Array{Float64,1},
-               caso::Int64, freq::Float64, alfa::Float64, beta::Float64, A::Float64, Ye::Float64, filtra::Bool=true )
-
+   nnos::Int64, nel::Int64, ijk::Array{Int64,2}, ID::Array{Int64,2}, K0::Array{Float64,2},
+         M0::Array{Float64,2}, SP::Float64, vmin::Float64, F::Array{Float64,1}, NX::Int64,
+            NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2},
+          raiof::Float64, Y0::Array{Float64,1}, caso::Int64, freq::Float64, alfa::Float64,
+         beta::Float64, A::Float64, Ye::Float64, CBA::Array{Float64,3}, filtra::Bool=true)
+         
     # Filtra o x antes de qualquer coisa
     if filtra
         xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
@@ -37,7 +37,7 @@ function F_Est(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
     valor_fun = Est / Y0[1]
 
     # Funções de restrição, volume normalizada
-    valor_res = [ (mean(x)-0.49)/0.51 ]
+    valor_res = [ (mean(xf)-0.49)/0.51 ]
 
     # Se quiser a função obj normalizada
     if tipo == 1

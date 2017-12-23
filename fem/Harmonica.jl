@@ -74,20 +74,22 @@ function Verifica_Eig(K,M)
 
     n=6
 
-    AVL = IterativeEigenSolvers.eigs(K,M,nev=n,which=:SM,ritzvec=true)
+    AVL = IterativeEigensolvers.eigs(K,M,nev=n,which=:SM,ritzvec=true)
 
     auto_vals = sqrt.(real(AVL[1]))/2.0/pi
     auto_vets = AVL[2]
 
+    println(auto_vals')
+
     #println(auto_vals')
-    for i=1:(n-1)
+    #for i=1:(n-1)
 
         #teste = transpose(auto_vets[i]).*auto_vets[i+1]
-        teste = dot(auto_vets[i],auto_vets[i+1])
+    #    teste = dot(auto_vets[i],auto_vets[i+1])
 
-        if abs(teste) <= 1E-13
-            println("Modos ",auto_vals[i]," e ",auto_vals[i+1]," se cruzam: ",teste)
-        end
+    #    if abs(teste) <= 1E-14
+    #        println("Modos ",auto_vals[i]," e ",auto_vals[i+1]," se cruzam: ",teste)
+    #    end
 
-    end
+    #end
 end

@@ -19,7 +19,7 @@ function main()
     dts = "Teste"
 
     # Parâmetros da Função Objetivo
-    caso        = 11        # Seleciona o caso (ver Fobjs)
+    caso        = 2         # Seleciona o caso (ver Fobjs)
     freq        = 100.0     # Frequência de excitação
     alfa        = 0.0       # Amortecimento Proporcional - Massa
     beta        = 1E-8      # Amortecimento Proporcional - Rigidez
@@ -42,7 +42,7 @@ function main()
     vmin        = 1E-9      # Densidade mínima
 
     # Parâmetros do problema de FEM, 60x30 = 1800 // 140x70 = 9800
-    NX          = 60       # Nr. de elementos em X
+    NX          = 60        # Nr. de elementos em X
     NY          = 30        # Nr. de elementos em Y
     LX          = 1.0       # Comprimento em X
     LY          = 0.5       # Comprimento em Y
@@ -55,10 +55,13 @@ function main()
     #        [ ponto_X0 ponto_Y0    ponto_XF    ponto_YF    dir (X=1 Y=2)]
     presos = [  0.0     0.0         0.0         LY          1 ;
                 0.0     0.0         0.0         LY          2 ]
+    #presos = [  LX      0.0         LX          LY          1 ;
+    #            LX      0.0         LX          LY          2 ]
 
     # Carregamentos:
     #        [ ponto_X  ponto_Y     força       dir (X=1 Y=2)]
     forcas = [ LX       LY/2.0      -9000.0     2 ]
+    #forcas = [ LX/2.0     0.0      -9000.0     2 ]
 
     # Executa.
     Top_Opt(dts, caso, freq, alfa, beta, Ye, A, dini, max_ext, max_int, tol_ext,

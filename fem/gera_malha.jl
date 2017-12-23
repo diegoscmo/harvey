@@ -12,12 +12,12 @@ function GeraMalha(nnos::Int64, nelems::Int64, LX::Float64, LY::Float64, NX::Int
    npresos = size(presos,1)            # Nr. de apoios
    nforcas = size(forcas,1)            # Nr. de carregamentos
 
-   # Define a menor dimensao de um elemento, para fins de tolerancia dimensional
+   # Define a menor dimensao de um elemento, para fins de tol dimensional
    deltax = LX/NX
    deltay = LY/NY
 
-   # Define a tolerancia geometrica para as janelas
-   tolerancia= min(deltax,deltay)/10.0
+   # Define a tol geometrica para as janelas
+   tol= min(deltax,deltay)/10.0
 
    # Aloca matriz de coordenadas nodais
    elcoor = zeros(nnos,2)
@@ -81,11 +81,12 @@ function GeraMalha(nnos::Int64, nelems::Int64, LX::Float64, LY::Float64, NX::Int
            x = elcoor[no,1]
            y = elcoor[no,2]
 
-           if (x>=xi) && (x<=xf) && (y>=yi) && (y<=yf)
+           if (x>=xi-tol) && (x<=xf+tol) && (y>=yi-tol) && (y<=yf+tol)
               ngl_preso +=1
               gls_presos[ngl_preso,1] = no
               gls_presos[ngl_preso,2] = dir
            end #if
+
 
        end #no
 
@@ -113,7 +114,7 @@ function GeraMalha(nnos::Int64, nelems::Int64, LX::Float64, LY::Float64, NX::Int
           xn = elcoor[no,1]
           yn = elcoor[no,2]
 
-          if abs(x-xn)<=tolerancia && abs(y-yn)<=tolerancia
+          if abs(x-xn)<=tol && abs(y-yn)<=tol
              nos_forcas[i,1] = no
              nos_forcas[i,2] = dir
              nos_forcas[i,3] = valor
