@@ -11,7 +11,7 @@ function Imprime_Int(i_int::Int64, contaev::Int64, norma::Float64, dts::Abstract
     @printf("  \t\tpassos internos: %d | T: %.3f mins | evals: %d | dL: %.3e\n",i_int,t,contaev,norma)
 
     if dts !=  "OFF"
-        file1 = string(dts,"_B.txt")
+        file1 = string(dts,"_log.txt")
         saida  = open(file1,"a")
         @printf(saida,"  \t\tpassos internos: %d | T: %.3f mins | evals: %d | dL: %.3e\n",i_int,t,contaev,norma)
         close(saida)
@@ -23,25 +23,28 @@ function Imprime_Ext(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,
                      dts::String, nel::Int64, to_plot::Array{Float64,1}, TS::Array{Float64,2},
                      vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2}, raiof::Float64)
 
-    xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
+    xf =  Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
+    xh, = Filtro_Heavi(x, nel, 0.5)
     vol = mean(xf)
 
     # Displau dos valores atuais
     @printf("\n  iter: %d \torigin. fitness: %.6e\tvolume:\t%.5f ", i_ext, valor_fun, vol)
     @printf("\n  rho: %.3f", rho)
     @printf(" \tmults. lagrange: ")
-    show(mult_res);
+    show(mean(mult_res));
     @printf("\n\t\tval. restrições: ")
-    show(valor_res);
+    show(mean(valor_res));
     @printf("\n")
 
     if dts !=  "OFF"
     # Abre os arquivos
-        fmesh  = string(dts,"_A.pos")
-        fmesh2 = string(dts,"_F.pos")
-        fmesh3 = string(dts,"_S.pos")
-        file1  = string(dts,"_B.txt")
-        file2  = string(dts,"_C.txt")
+        fmesh  = string(dts,"_dens_o.pos")
+        fmesh2 = string(dts,"_dens_f.pos")
+        fmesh3 = string(dts,"_stress.pos")
+        fmesh4 = string(dts,"_dens_H.pos")
+        file1  = string(dts,"_log.txt")
+        file2  = string(dts,"_monitora.txt")
+        file3  = string(dts,"_save.txt")
 
         saida  = open(file1,"a")
         saida2 = open(file2,"a")
@@ -49,30 +52,37 @@ function Imprime_Ext(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,
         @printf(saida,"\n  iter: %d \torigin. fitness: %.6e\tvolume:\t%.5f ", i_ext, valor_fun, vol)
         @printf(saida,"\n  rho: %.3f", rho)
         @printf(saida," \tmults. lagrange: ")
-        show(saida,mult_res);
+        show(saida,mean(mult_res));
         @printf(saida,"\n\t\tval. restrições: ")
-        show(saida,valor_res);
+        show(saida,mean(valor_res));
         @printf(saida,"\n")
 
-        #Fobj e volume
-
-        s_fobj = size(to_plot,1)
-
-        if s_fobj == 1
-            println(saida2,to_plot[1]," ",vol)
-        elseif s_fobj == 2
-            println(saida2,to_plot[1]," ",to_plot[2]," ",vol)
-        elseif s_fobj == 3
-            println(saida2,to_plot[1]," ",to_plot[2]," ",to_plot[3]," ",vol)
-        end
-
         close(saida)
+
+        # Plots de valores
+        s_toplot = size(to_plot,1)
+        for j = 1:s_toplot
+            @printf(saida2, "%.3e ", to_plot[j])
+        end
+        @printf(saida2,"\n")
         close(saida2)
-        # Imprime GMSH
+
+        # Imprime para retomar
+        if isfile(file3); rm(file3); end
+        if i_ext>0
+            saida3 = open(file3,"a")
+            println(saida3,i_ext)
+            println(saida3,rho)
+        for j=1:size(mult_res,1)
+            println(saida3,mult_res[j])
+        end
+        close(saida3)
+        end
 
         Adiciona_Vista_Escalar_Gmsh(fmesh, "x", nel, x, Float64(i_ext))
         Adiciona_Vista_Escalar_Gmsh(fmesh2, "xf", nel, xf, Float64(i_ext))
         Adiciona_Vista_Nodal_Tensor_Gmsh(fmesh3, nel, "S", TS, Float64(i_ext))
+        Adiciona_Vista_Escalar_Gmsh(fmesh4, "xh", nel, xh, Float64(i_ext))
 
     end
 
@@ -91,11 +101,13 @@ function Imprime_0(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}
     if dts !=  "OFF"
 
         # Abre os arquivos
-        fmesh  = string(dts,"_A.pos")
-        fmesh2 = string(dts,"_F.pos")
-        fmesh3 = string(dts,"_S.pos")
-        file1  = string(dts,"_B.txt")
-        file2  = string(dts,"_C.txt")
+        fmesh  = string(dts,"_dens_o.pos")
+        fmesh2 = string(dts,"_dens_f.pos")
+        fmesh3 = string(dts,"_stress.pos")
+        fmesh4 = string(dts,"_dens_h.pos")
+        file1  = string(dts,"_log.txt")
+        file2  = string(dts,"_monitora.txt")
+        file3  = string(dts,"_save.txt")
 
         if isfile(fmesh)
             rm(fmesh)
@@ -106,11 +118,17 @@ function Imprime_0(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}
         if isfile(fmesh3)
             rm(fmesh3)
         end
+        if isfile(fmesh4)
+            rm(fmesh4)
+        end
         if isfile(file1)
             rm(file1)
         end
         if isfile(file2)
             rm(file2)
+        end
+        if isfile(file3)
+            rm(file3)
         end
 
         saida  = open(file1,"a")
@@ -119,6 +137,7 @@ function Imprime_0(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}
         Inicializa_Malha_Gmsh(fmesh, nnos, nel, ijk, coord, 2)
         Inicializa_Malha_Gmsh(fmesh2, nnos, nel, ijk, coord, 2)
         Inicializa_Malha_Gmsh(fmesh3, nnos, nel, ijk, coord, 2)
+        Inicializa_Malha_Gmsh(fmesh4, nnos, nel, ijk, coord, 2)
         println(saida,"\n  LagAug:: ",dts)
         println(saida,"\n  Nelems:: ",nel," | Iter:: ",max_ext,"/",max_int," | Tol:: ",tol_ext,"/",tol_int)
         close(saida)
@@ -143,7 +162,7 @@ function Le_Densidades(arquivo::String, nel::Int64)
    array = texto[(end-nel):(end-1)]
 
    # Inicializa o array
-   dens = Array{Float64}(uninitialized,nel)
+   dens = Array{Float64}(undef,nel)
 
    for i=1:nel
 
@@ -159,3 +178,33 @@ function Le_Densidades(arquivo::String, nel::Int64)
    return dens
 
 end
+
+#
+# Carrega itex, rho e mult_res
+#
+function Le_Ultima(arquivo::String)
+
+    # Le arquivo
+arquivo  = string(arquivo,"_save.txt")
+   texto = readlines(arquivo)
+
+   nrest = size(texto,1)-2
+
+   i_ext = parse(Int64,texto[1])+1
+   rho   = parse(Float64,texto[2])
+
+   mult_res = Array{Float64,1}(undef,nrest)
+
+   for j=3:size(texto,1)
+       mult_res[j-2] = parse(Float64,texto[j])
+   end
+
+   return i_ext,rho,mult_res
+
+end
+
+# Leitura da Y/N
+function input(prompt::String="")::String
+           print(prompt)
+           return chomp(readline())
+       end

@@ -21,14 +21,11 @@ function Global_KM(densidades::Array{Float64,1}, nelems::Int64, ijk::Array{Int64
      # Monta a matriz Global de Rigidez e Massa
      contador = 1
 
-     # Para correção das propriedades (E_min / rho_min)
-     vsuper = 1.0 - vminimo
-
      # Inicializa vetores
-     I = Array{Int64}(uninitialized,8*8*nelems)
-     J = Array{Int64}(uninitialized,8*8*nelems)
-     V = Array{Float64}(uninitialized,8*8*nelems)
-     W = Array{Float64}(uninitialized,8*8*nelems)
+     I = Array{Int64}(undef,8*8*nelems)
+     J = Array{Int64}(undef,8*8*nelems)
+     V = Array{Float64}(undef,8*8*nelems)
+     W = Array{Float64}(undef,8*8*nelems)
 
      for el = 1:nelems
         # rotina para determinacao dos vetores para montagem da matriz esparsa
@@ -48,8 +45,8 @@ function Global_KM(densidades::Array{Float64,1}, nelems::Int64, ijk::Array{Int64
                                      J[contador] = glgj
 
                                      # Corrige o valor mínimo na montagem da matriz
-       	                             V[contador] = (vminimo + kfator*vsuper)*K0[glli,gllj]
-                                     W[contador] = (vminimo + mfator*vsuper)*M0[glli,gllj]
+       	                             V[contador] = kfator*K0[glli,gllj]
+                                     W[contador] = mfator*M0[glli,gllj]
 
                                      contador = contador + 1
                                 #end # if U
@@ -97,15 +94,10 @@ end
 # Rotina que expande um vetor global compactado (sem os gls restritos)
 # para um vetor com a dimensão global original e com 0.0 nas
 # posições restritas
-function Expande_Vetor(entrada, nnos, ID, C::Bool=false)
+function Expande_Vetor(entrada::Array{T,1}, nnos, ID) where T
 
    # Aloca o vetor de saida
-   saida = zeros(2*nnos)
-
-   # Se for complexo...
-   if C == true
-       saida = complex(saida)
-   end
+   saida = zeros(T,2*nnos)
 
    # Loop pelas posicoes de ID, catando no vetor de entrada
    # a medida que ID permitir

@@ -9,9 +9,9 @@ function F_Pot_A_Est_R_R(x::Array{Float64,1}, rho::Float64, mult_res::Array{Floa
              nnos::Int64, nel::Int64, ijk::Array{Int64,2}, ID::Array{Int64,2}, K0::Array{Float64,2},
                    M0::Array{Float64,2}, SP::Float64, vmin::Float64, F::Array{Float64,1}, NX::Int64,
                       NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2},
-                    raiof::Float64, Y0::Array{Float64,1}, caso::Int64, freq::Float64, alfa::Float64,
-                   beta::Float64, A::Float64, Ye::Float64, CBA::Array{Float64,3}, filtra::Bool=true)
-                   
+                    raiof::Float64, Y0::Array{Float64,1}, Sy::Float64, freq::Float64, alfa::Float64,
+                   beta::Float64, A::Float64, Ye::Float64, CBA::Array{Float64,3}, QP::Float64)
+
     # Peso do problema de potência e do estático
     B   = 1.0 - abs(A)
 
@@ -19,11 +19,10 @@ function F_Pot_A_Est_R_R(x::Array{Float64,1}, rho::Float64, mult_res::Array{Floa
     R_m = Ye
 
     # Filtra o x antes de qualquer coisa
-    if filtra
-        xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
-    else
-        xf = copy(x)
-    end
+    xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
+
+    # Corrige x com vmin
+    xc = broadcast(+,vmin,(1.0-vmin)*xf)
 
     # Monta matriz de rigidez e massa global, aqui é aplicado o SIMP
     KG, MG = Global_KM(xf, nel, ijk, ID, K0, M0, SP, vmin)
@@ -45,7 +44,7 @@ function F_Pot_A_Est_R_R(x::Array{Float64,1}, rho::Float64, mult_res::Array{Floa
 
     # Retorna valores zero
     if tipo == 0
-        Y0 = Array{Float64}(uninitialized,2)
+        Y0 = Array{Float64}(undef,2)
         Y0[1] = PadB
         if A<0.0
             Y0[1] = -Y0[1]
@@ -75,7 +74,7 @@ function F_Pot_A_Est_R_R(x::Array{Float64,1}, rho::Float64, mult_res::Array{Floa
     if tipo == 1
 
         UDx = real(Expande_Vetor(UD, nnos, ID, true))
-        TS = Tquad4_I(xf, nel, SP, 2.8, ijk, CBA, UDx)
+        TS = Tquad4_I(xf, nel, SP, QP, ijk, CBA, UDx)
 
         return valor_fun, valor_res, [valor_fun1;valor_fun2;real(Ep/Ec)],TS
 

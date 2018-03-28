@@ -112,7 +112,7 @@ function dL_Dens(dL::Array{Float64,1},nel::Int64,vizi::Array{Int64,2},
         @inbounds for k in vizm
 
             # Posição de m na tabela de vizinhanca
-            pos = findfirst(equalto(m),vizi[k,1:nviz[k]])
+            pos = findfirst(==(m),vizi[k,1:nviz[k]])
 
             # Calcula o peso (H) entre m e k
             Hmk = 1.0 - dviz[k,pos]/raiof
@@ -135,18 +135,16 @@ end
 
 
 
-function Filtra(x,csi,nel)
+function Filtro_Heavi(x::Array{Float64,1},nel::Int64,csi)
 
     # Inicializa o x filtrado
 
     # Calcula filtro de densidades
-
     #se csi = 0.0, retorna filtro de densidades
-
     #se csi > 0.0, heaviside
 
     # Soma proveniente do filtro de densidades
-    sum_xd = sum(xd)
+    sum_xd = sum(x)
 
     #resolve o filtro para csi
     a = 0.0
@@ -155,33 +153,38 @@ function Filtra(x,csi,nel)
 
     tol = 1E-2
 
-    x_a = Array{Float64}(uninitialized,nel)
-    x_c = Array{Float64}(uninitialized,nel)
-    xh  = Array{Float64}(uninitialized,nel)
+    x_a = Array{Float64}(undef,nel)
+    x_c = Array{Float64}(undef,nel)
+    xh  = Array{Float64}(undef,nel)
 
+    # Procura o valor de eta
     while true
 
+        # Criério de parada
         if (b-a)<=tol
             break
         end
 
+        # Tanh dos valores inferiores e médios
         thcn_a = tanh(csi*a)
         thcn_c = tanh(csi*c)
 
+        # Forma os vetores
         for j = 1:nel
             x_a[j] = (thcn_a + tanh(csi*(x[j]-a)))/(thcn_a+tanh(csi*(1.0-a)))
             x_c[j] = (thcn_c + tanh(csi*(x[j]-c)))/(thcn_c+tanh(csi*(1.0-c)))
         end
 
+        # Verifica a diferença entre o valor original
         fun_a = sum(x_a) - sum_xd
         fun_c = sum(x_c) - sum_xd
 
+        # Se houver uma raiz entre a e c, senão está em c e b, reitera
         if fun_a*fun_c < 0.0
             b = copy(c)
         else
             a = copy(c)
         end
-
         c = (a+b)/2.0
 
     end
@@ -193,4 +196,52 @@ function Filtra(x,csi,nel)
     end
 
     return xh,eta
+end
+
+#
+# Corrige derivada devido ao filtro heaviside (cadeia)
+#
+function dL_Heavi(xf::Array{Float64,1},dL::Array{Float64,1},csi::Float64,eta::Float64,nel::Int64)
+
+
+
+    return dLH
+end
+
+function dL_Heavi(dL::Array{Float64,1},nel::Int64,vizi::Array{Int64,2},
+    nviz::Array{Int64,1},dviz::Array{Float64,2},raiof::Float64,xf::Array{Float64,1},csi::Float64,eta::Float64)
+
+    # Inicializa o vetor das derivadas corrigidas
+    dLo = zeros(Float64,nel)
+
+    # Varre m elementos
+    for m=1:nel
+
+        # Define vizinhos de m
+        vizm = vizi[m,1:nviz[m]]
+
+        # Varre os vizinhos de m
+        @inbounds for k in vizm
+
+            # Posição de m na tabela de vizinhanca
+            pos = findfirst(equalto(m),vizi[k,1:nviz[k]])
+
+            # Calcula o peso (H) entre m e k
+            Hmk = 1.0 - dviz[k,pos]/raiof
+
+            # Loop para denominador da filtragem, Hjk
+            soma = 0.0
+            @inbounds for j=1:nviz[k]
+                soma += 1.0 - dviz[k,j]/raiof
+            end #j
+
+            # Acumula a correção de derivada
+            dH = (csi*sech(csi*(xf[k]-eta))^2.0)/(tanh(csi*eta)+tanh(csi*(1.0-eta)))
+            dLo[m] += dL[k]*(Hmk/soma)*dH
+
+        end #k
+
+    end #m
+
+    return dLo
 end

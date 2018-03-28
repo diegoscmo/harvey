@@ -2,94 +2,175 @@
 #####                          Análise Harmônica                          ######
 ################################################################################
 
-function Harmonica(dts::String, f_ini::Float64 ,f_delta::Float64 ,f_fim::Float64,
-                    alfa::Float64, beta::Float64, nel::Int64, ijk::Array{Int64,2},
+function Analise_Harmonica(freq::Float64, arquivo_saida, nelems::Int64, nnos::Int64,
+                           ijk::Array{Int64,2},coord::Array{Float64,2},
                     ID::Array{Int64,2}, K0::Array{Float64,2}, M0::Array{Float64,2},
-                    SP::Float64, vmin::Float64, F::Array{Float64,1}, vizi::Array{Int64,2},
-                    nviz::Array{Int64,1}, dviz::Array{Float64,2}, raiof::Float64)
+                    nos_forcas, ngl_efetivos, alfa::Float64, beta::Float64,
+                    densidades=[], simp=1.0, vminimo=1E-3)
 
-    # Abre saída
-    file  = string(dts,"_H.txt")
-    if isfile(file)
-        rm(file)
+    println("\n Iniciando a análise harmônica para $freq Hz ")
+
+    # Se não foram informadas densiades...
+    if densidades==[]
+        densidades=ones(nelems)
     end
-    filep  = string(dts,"_P.txt")
-    if isfile(filep)
-        rm(filep)
+
+    # Monta as matrizes globais de massa e de rigidez
+    K,M = Global_KM(densidades,nelems,ijk,ID,K0,M0,simp,vminimo)
+
+    # Monta o vetor de forças globais
+    F = Global_F(ID,nos_forcas,ngl_efetivos)
+
+    # Converte a frequência para radianos/s
+    w = 2.0*pi*freq
+
+    # Monta a matriz dinâmica
+    KD = K - (w^2.0)*M + w*im*(alfa*M + beta*K)
+
+    # Soluciona o sistema...como pode ser ou não posdef, vamos usar LU
+    UD = vec(lufact(KD)\F)
+
+    # Grava para visualização no gmsh
+    Inicializa_Malha_Gmsh(arquivo_saida,nnos,nelems,ijk,coord)
+
+    # Grava a parte real do vetor de deslocamentos
+    desloc = Expande_Vetor(real.(UD), nnos, ID)
+
+    # Grava no arquivo
+    Adiciona_Vista_Nodal_Vetorial_Gmsh(nnos, arquivo_saida," Freq $(freq) Hz",
+                                      desloc,0.0)
+
+
+    println("Análise Harmonica terminada com sucesso")
+end
+
+
+#
+# Realiza uma varredura em frequência (Harmônica)
+#
+function Varredura(arquivo_saida, fvarredura,nos_monitor,
+                   nelems::Int64, nnos::Int64,
+                   ijk::Array{Int64,2},coord::Array{Float64,2},
+                   ID::Array{Int64,2}, K0::Array{Float64,2}, M0::Array{Float64,2},
+                   nos_forcas, ngl_efetivos, alfa::Float64, beta::Float64,
+                   densidades=[], simp=1.0, vminimo=1E-3)
+
+
+    # Gera lista de frequências angulares para varredura
+    lista_w = 2*pi.*collect(fvarredura)
+
+    println("\n Iniciando varredura harmônica de $(minimum(lista_w)/(2*pi))
+                            até $(maximum(lista_w)/(2*pi))Hz ")
+
+    # Numero de termos na lista de varreduras
+    numero_w = length(lista_w)
+
+    println("\n Total de análises:  $(numero_w)  em ")
+
+    # Abre um arquivo para monitoramento da resposta
+    # de alguns gls
+    arquivo_monitor = open("monitor.txt","w")
+
+
+    # Se não foram informadas densiades...
+    if densidades==[]
+        densidades=ones(nelems)
     end
-    saida = open(file,"a")
-    saidap = open(filep,"a")
 
-    # Carrega o x do arquivo
-    x = Le_Densidades(string(dts,"_A.pos"),nel)
+    # Monta as matrizes globais de massa e de rigidez
+    K,M = Global_KM(densidades,nelems,ijk,ID,K0,M0,simp,vminimo)
 
-    # Filtra
-    x = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
+    # Monta o vetor de forças globais
+    F = Global_F(ID,nos_forcas,ngl_efetivos)
 
-    # Monta matriz de rigidez e massa global, aqui é aplicado o SIMP
-    KG, MG = Global_KM(x, nel, ijk, ID, K0, M0, SP, vmin)
+    # Grava para visualização no gmsh
+    Inicializa_Malha_Gmsh(arquivo_saida,nnos,nelems,ijk,coord)
 
-    # Inicializa frequencia e vetores
-    freq = collect(f_ini:f_delta:f_fim)
-    tamf = size(freq,1)
+    # Vamos fazer uma manha para inicialização dos fatores LDL
+    # na matriz C que será reaproveitada em ldltfact!(C,KD) no
+    # loop principal...
+    w = lista_w[1]
+    KD = Hermitian(K - (w^2.0)*M + w*im*(alfa*M + beta*K))
+    C = ldltfact(KD)
 
-    for i = 1:tamf
+    # Loop pela lista de frequências
+    @time for w in lista_w
 
-        # Determina a frequencia em rad/s
-        f = freq[i]
-        w = 2.0*pi*f
+        # Monta a matriz dinâmica
+        KD = Hermitian(K - (w^2.0)*M + w*im*(alfa*M + beta*K))
 
-        # Resolve o sistema dinamico
-        UD = Array{Complex{Float64}}(uninitialized,nel)
+        # Soluciona o sistema...como pode ser ou não posdef, vamos usar LDL
+        ldltfact!(C,KD)
+        UD = vec(C\F)
 
-        try
-            KD = Hermitian(sparse(KG + w*im*(alfa*MG + beta*KG) - (w^2.0)*MG))
-            UD = vec(cholfact(KD;shift=-1E2)\F)
+        # Grava a resposta no arquivo de monitoramento
+        for i=1:size(nos_monitor,1)
 
-        catch
-            KD = KG + w*im*(alfa*MG + beta*KG) - (w^2.0)*MG
-            UD = vec(lufact(KD)\F)
+            no = nos_monitor[i,1]
+            gl = nos_monitor[i,2]
+            glg = ID[no,gl]
+            ud = UD[glg]
+            pr = real(ud)
+            pc = imag(ud)
+            pn = norm(ud)
+            print(arquivo_monitor," $no $gl $pr $pc $pn ")
 
         end
+        print(arquivo_monitor,"\n")
+
+        # Grava a parte real do vetor de deslocamentos para visualização
+        desloc = Expande_Vetor(real.(UD), nnos, ID)
+
+        # Grava no arquivo
+        f_Hz = w/(2.0*pi)
+        Adiciona_Vista_Nodal_Vetorial_Gmsh(nnos, arquivo_saida," Freq $(f_Hz) Hz",
+                                           desloc,w)
 
 
-        # Salva frequencia e flexibilidade
-        Y = log10(abs(real(dot(F,UD))))
+    end # w in lista_w
 
-        # Faz também a potencia
-        Z = log10(abs(0.5*w*real(im*dot(F,UD))))
+    close(arquivo_monitor)
+    println(" Varredura Harmonica terminada com sucesso")
+end
 
-        println(saida,f," ",Y)
-        println(saidap,f," ",Z)
+#
+# Calcula os <numero_modos> menores modos e frequências naturais da estrutura
+#
+function Analise_Modal(numero_modos,K0,M0,nelems,nnos,ijk,ID,coord,arquivo_saida,
+               densidades=[],simp=3.0,vminimo=1E-3)
 
-    end #i
+    println("\n Iniciando a análise modal para $(numero_modos) modos ")
 
-    close(saida)
-    close(saidap)
+    # Se não foram informadas densiades...
+    if densidades==[]
+        densidades=ones(nelems)
+    end
 
-end #function
+    # Monta as matrizes globais de massa e de rigidez
+    K,M = Global_KM(densidades,nelems,ijk,ID,K0,M0,simp,vminimo)
 
+    # Utilizamos o ARPACK
+    @time AVL = IterativeEigensolvers.eigs(K,M,nev=numero_modos,which=:SM,ritzvec=true)
 
-function Verifica_Eig(K,M)
-
-    n=6
-
-    AVL = IterativeEigensolvers.eigs(K,M,nev=n,which=:SM,ritzvec=true)
-
+    # Converte as frequências para Hertz
     auto_vals = sqrt.(real(AVL[1]))/2.0/pi
-    auto_vets = AVL[2]
+    auto_vets = convert.(Float64,AVL[2])
 
-    println(auto_vals')
+    # Vamos gravar os modos para um arquivo de visualização no gmsh
+    Inicializa_Malha_Gmsh(arquivo_saida,nnos,nelems,ijk,coord)
 
-    #println(auto_vals')
-    #for i=1:(n-1)
+    # Para cada modo, convertemos para FULL e geramos a visualização
+    for modo=1:numero_modos
 
-        #teste = transpose(auto_vets[i]).*auto_vets[i+1]
-    #    teste = dot(auto_vets[i],auto_vets[i+1])
+           # Expande o modo
+           desloc = Expande_Vetor(auto_vets[:,modo], nnos, ID)
 
-    #    if abs(teste) <= 1E-14
-    #        println("Modos ",auto_vals[i]," e ",auto_vals[i+1]," se cruzam: ",teste)
-    #    end
+           # Grava no arquivo
+           Adiciona_Vista_Nodal_Vetorial_Gmsh(nnos,arquivo_saida," Freq $(auto_vals[modo]) Hz",
+                                             desloc,convert(Float64,modo))
 
-    #end
+    end #modo
+
+    println("Problema modal terminado com sucesso")
+
 end

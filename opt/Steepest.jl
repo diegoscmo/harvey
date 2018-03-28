@@ -8,15 +8,15 @@ function Steepest(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1},
              tol_int::Float64, nnos::Int64, nel::Int64, ijk::Array{Int64,2}, ID::Array{Int64,2},
     K0::Array{Float64,2}, M0::Array{Float64,2}, SP::Float64, vmin::Float64, F::Array{Float64,1},
        NX::Int64, NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2},
-             raiof::Float64 ,dts::String, valor_0::Array{Float64,1}, caso::Int64, freq::Float64,
-                   alfa::Float64, beta::Float64, A::Float64, Ye::Float64, CBA::Array{Float64,3})
+             raiof::Float64 ,dts::String, valor_0::Array{Float64,1}, Sy::Float64, freq::Float64,
+      alfa::Float64, beta::Float64, A::Float64, Ye::Float64, CBA::Array{Float64,3}, QP::Float64, csi::Float64, dmax::Float64)
 
     # Parâmetros, passo mínimo e máximo de iterações estagnado
     minimo    = 1E-5*(nel^0.5)
     max_break = Int(round(0.7*max_int))
 
     # Inicializa os vetores para derivadas
-    dL = Array{Float64}(uninitialized,nel)
+    dL = Array{Float64}(undef,nel)
 
     # Inicializa o contador para break estagnado e de avaliações da Fobj
     breaker = 0
@@ -30,15 +30,15 @@ function Steepest(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1},
     # Lagrangiano no ponto de partida
     L0, = F_Obj(x, rho, mult_res, 2, nnos, nel, ijk, ID, K0, M0, SP, vmin,
                                  F, NX, NY, vizi, nviz, dviz, raiof, valor_0,
-                                 caso, freq, alfa, beta, A, Ye, CBA)
+                                 Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax)
 
     # Laço interno + cronômetro
     tmp = @elapsed for i=1:max_int
 
-        # Calcula sensibilidade
+        # Calcula sensibilidade #F_Obj_DF = diferenças finitas + impressão
         dL, = F_Obj(x, rho, mult_res, 3, nnos, nel, ijk, ID, K0, M0, SP, vmin,
                                      F, NX, NY, vizi, nviz, dviz, raiof, valor_0,
-                                     caso, freq, alfa, beta, A, Ye, CBA)
+                                     Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax)
         contaev += 1
 
         # Bloqueia a direcao e zera o gradiente se bloqueado
@@ -63,7 +63,7 @@ function Steepest(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1},
         (alpha, conta_line, L0) = Wall_Search(x, rho, mult_res, dir, tol_int,
                                 minimo, nnos, nel, ijk, ID, K0, M0, SP, vmin, F, NX, NY, vizi,
                                 nviz, dviz, raiof, passo0, L0, valor_0,
-                                caso, freq, alfa, beta, A, Ye, CBA)
+                                Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax)
         contaev += conta_line
         i_int += 1
 

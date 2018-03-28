@@ -10,7 +10,7 @@ function F_Pot(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
          M0::Array{Float64,2}, SP::Float64, vmin::Float64, F::Array{Float64,1}, NX::Int64,
             NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2},
           raiof::Float64, Y0::Array{Float64,1}, caso::Int64, freq::Float64, alfa::Float64,
-         beta::Float64, A::Float64, Ye::Float64, CBA::Array{Float64,3}, filtra::Bool=true)
+         beta::Float64, A::Float64, Ye::Float64, CBA::Array{Float64,3}, filtra::Bool=true, ::Float64=2.5)
 
     # Filtra o x antes de qualquer coisa
     if filtra
@@ -18,6 +18,9 @@ function F_Pot(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
     else
         xf = copy(x)
     end
+
+    # Corrige x com vmin
+    xc = broadcast(+,vmin,(1.0-vmin)*xf)
 
     # Monta matriz de rigidez e massa global, aqui é aplicado o SIMP
     KG, MG = Global_KM(xf, nel, ijk, ID, K0, M0, SP, vmin)
@@ -46,7 +49,7 @@ function F_Pot(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
     if tipo == 1
 
         UDx = real(Expande_Vetor(UD, nnos, ID, true))
-        TS = Tquad4_I(xf, nel, SP, 2.8, ijk, CBA, UDx)
+        TS = Tquad4_I(xf, nel, SP, QP, ijk, CBA, UDx)
 
         return valor_fun, valor_res, [valor_fun],TS
 
@@ -59,7 +62,7 @@ function F_Pot(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
     elseif tipo == 3
 
         # Inicializa a derivada interna
-        dL = Array{Float64}(uninitialized,nel)
+        dL = Array{Float64}(undef,nel)
 
         # Valor para correção da derivada
         corr_min = 1.0 - vmin

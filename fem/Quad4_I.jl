@@ -8,14 +8,14 @@ function Kquad4_I(elem::Int64, coord::Array{Float64,2}, conect::Array{Int64,2},
     elast::Float64, poiss::Float64, espess::Float64)
 
     # Define os arrays locais
-    nos  = Array{Float64}(uninitialized,2,4)
+    coord_nos  = Array{Float64}(undef,2,4)
     K_I  = zeros(12,12)
     CBA  = zeros(3,8,4)
 
     # Determina as coordenadas dos nós
     for i=1:4
-        nos[1,i] = coord[conect[elem,i],1]
-        nos[2,i] = coord[conect[elem,i],2]
+        coord_nos[1,i] = coord[conect[elem,i],1]
+        coord_nos[2,i] = coord[conect[elem,i],2]
     end
 
     # tabela de pontos de Gauss
@@ -31,24 +31,28 @@ function Kquad4_I(elem::Int64, coord::Array{Float64,2}, conect::Array{Int64,2},
 
     # Integra numericamente com 4 pontos de Gauss
     for p=1:4
-        (B,DJ) = Bquad4_I(gpoint[1,p],gpoint[2,p],nos)
+        (B,DJ) = Bquad4_I(gpoint[1,p],gpoint[2,p],coord_nos)
         K_I .= K_I + (transpose(B)*De*B)*DJ;
     end
     K_I = K_I*espess
 
     # Incompatível
-    Kaa = K_I[1:8,1:8]
-    Kab = K_I[1:8,9:12]
-    Kba = K_I[9:12,1:8]
-    Kbb = K_I[9:12,9:12]
-    K = Kaa - At_mul_B(Kba,inv(Kbb)*Kba)
+    Kaa = view(K_I,1:8,1:8)
+    #Kab = K_I[1:8,9:12]
+    Kba = view(K_I,9:12,1:8)
+    Kbb = view(K_I,9:12,9:12)
+
+    invKbbKba = inv(Kbb)*Kba
+
+    K = Kaa - transpose(Kba)*invKbbKba
+
 
     # Matriz A
-    A = vcat(Matrix{Float64}(I,8,8),-inv(Kbb)*Kba)
+    A = vcat(Matrix{Float64}(I,8,8),-invKbbKba)
 
     # Gera matrizes CBA
     for p = 1:4
-        B, = Bquad4_I(gpoint[1,p],gpoint[2,p],nos)
+        B, = Bquad4_I(gpoint[1,p],gpoint[2,p],coord_nos)
         CBA[:,:,p] = De*B*A
     end
 
@@ -57,11 +61,11 @@ function Kquad4_I(elem::Int64, coord::Array{Float64,2}, conect::Array{Int64,2},
 
 end #Kquad4
 
-function Bquad4_I(r::Float64,s::Float64,nos::Array{Float64,2})
+function Bquad4_I(r::Float64,s::Float64,coord_nos::Array{Float64,2})
 
     # Criando matrizes necessarias
-    DN   = Array{Float64}(uninitialized,2,6)
-    B    = zeros(3,12)
+    DN   = Array{Float64}(undef,2,6)
+    B    = Array{Float64}(undef,3,12)
 
     #DN eh a matriz com as derivadas da funcao de forma em relacao a r e s
     DN[1,1] = (-1.0+s)/4.0
@@ -79,7 +83,7 @@ function Bquad4_I(r::Float64,s::Float64,nos::Array{Float64,2})
     DN[2,6] = -2.0*s
 
     #Calculo da matriz jacobiana
-    J  = DN[:,1:4]*transpose(nos)
+    J  = DN[:,1:4]*transpose(coord_nos)
 
     #Inverte a matriz jacobiana
     invJ = inv(J)
@@ -108,10 +112,12 @@ function Tquad4_I(pdens::Array{Float64,1}, nel::Int64, SP::Float64, SQ::Float64,
 
     # Define as dimensões e zera os arrays locais
     # [sigma_xx, sigma_yy, sigma_xy] * 4 pontos de Gauss
-    sigma = zeros(nel,12)
+    sigma = Array{Float64}(undef,nel,12)
+    SPQ   = SP-SQ
 
     # Loop pelos elementos
     for j=1:nel
+
         # Adquire os nós do elemento
         no1 = ijk[j,1]
         no2 = ijk[j,2]
@@ -126,10 +132,47 @@ function Tquad4_I(pdens::Array{Float64,1}, nel::Int64, SP::Float64, SQ::Float64,
         Ue = Ux[gdl]
 
         # Tensões nos 4 pontos de Gauss
-        sigma[j,1:3]   = (pdens[j]^(SP-SQ))*CBA[:,:,1]*Ue
-        sigma[j,4:6]   = (pdens[j]^(SP-SQ))*CBA[:,:,2]*Ue
-        sigma[j,7:9]   = (pdens[j]^(SP-SQ))*CBA[:,:,3]*Ue
-        sigma[j,10:12] = (pdens[j]^(SP-SQ))*CBA[:,:,4]*Ue
+        S_aux = pdens[j]^SPQ
+
+        for k=1:4
+            sigma[j,(k*3-2):(k*3)]   = S_aux*(CBA[:,:,k]*Ue)
+        end
+
+    end # for j
+
+    return sigma
+end # function
+
+function Tquad4_I_Din(pdens::Array{Float64,1}, nel::Int64, SP::Float64, SQ::Float64,
+                ijk::Array{Int64,2}, CBA::Array{Float64,3}, Ux::Array{Complex{Float64},1}, beta::Float64, w::Float64) #U expandido complexo
+
+    # Define as dimensões e zera os arrays locais
+    # [sigma_xx, sigma_yy, sigma_xy] * 4 pontos de Gauss
+    sigma = Array{Complex{Float64}}(undef,nel,12)
+    SPQ   = SP-SQ
+
+    # Loop pelos elementos
+    for j=1:nel
+
+        # Adquire os nós do elemento
+        no1 = ijk[j,1]
+        no2 = ijk[j,2]
+        no3 = ijk[j,3]
+        no4 = ijk[j,4]
+
+        # Mapeia o graus de liberdade do elemento
+        gdl = [2*no1-1,2*no1,2*no2-1,2*no2,
+               2*no3-1,2*no3,2*no4-1,2*no4]
+
+        # Deslocamentos do elemento
+        Ue = Ux[gdl]
+
+        # Tensões nos 4 pontos de Gauss
+        S_aux = (1.0+beta*im*w)*pdens[j]^SPQ
+
+        for k=1:4
+            sigma[j,(k*3-2):(k*3)]   = S_aux*(CBA[:,:,k]*Ue)
+        end
 
     end # for j
 
@@ -149,7 +192,7 @@ function Nquad4(r::Float64,s::Float64)
     #N = [N1 N2 N3 N4]
 
     N = [N1  0.0 N2  0.0 N3  0.0 N4  0.0
-    0.0 N1  0.0 N2  0.0 N3  0.0 N4]
+         0.0 N1  0.0 N2  0.0 N3  0.0 N4]
 
     return N
 
@@ -160,12 +203,12 @@ function Mquad4(elem::Int64, coordx::Array{Float64,2},conect::Array{Int64,2},
 
     # Define as dimensoes dos arrays locais
     M   = zeros(8,8)
-    nos = zeros(2,4)
+    coord_nos = zeros(2,4)
 
     # determina as coordxenadas dos nos
     for i=1:4
-        nos[1,i] = coordx[conect[elem,i],1]
-        nos[2,i] = coordx[conect[elem,i],2]
+        coord_nos[1,i] = coordx[conect[elem,i],1]
+        coord_nos[2,i] = coordx[conect[elem,i],2]
     end
 
     # Tabela de pontos de Gauss
@@ -175,7 +218,7 @@ function Mquad4(elem::Int64, coordx::Array{Float64,2},conect::Array{Int64,2},
 
     # Integra nos quatro pontos de Gauss
     for p=1:4
-        (B,DJ) = Bquad4_I(gpoint[1,p],gpoint[2,p],nos)
+        (B,DJ) = Bquad4_I(gpoint[1,p],gpoint[2,p],coord_nos)
         Nr     = Nquad4(gpoint[1,p],gpoint[2,p])
         M      = M + rho*(Nr'*Nr)*DJ
     end

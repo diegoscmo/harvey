@@ -10,7 +10,7 @@ function F_Din_R_Est(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,
                M0::Array{Float64,2}, SP::Float64, vmin::Float64, F::Array{Float64,1}, NX::Int64,
                   NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2},
                 raiof::Float64, Y0::Array{Float64,1}, caso::Int64, freq::Float64, alfa::Float64,
-               beta::Float64, A::Float64, Ye::Float64, CBA::Array{Float64,3}, filtra::Bool=true)
+               beta::Float64, A::Float64, Ye::Float64, CBA::Array{Float64,3}, filtra::Bool=true, QP::Float64=2.5)
 
     # Filtra o x antes de qualquer coisa
     if filtra
@@ -18,6 +18,9 @@ function F_Din_R_Est(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,
     else
         xf = copy(x)
     end
+
+    # Corrige x com vmin
+    xc = broadcast(+,vmin,(1.0-vmin)*xf)
 
     # Monta matriz de rigidez e massa global, aqui é aplicado o SIMP
     KG, MG = Global_KM(xf, nel, ijk, ID, K0, M0, SP, vmin)
@@ -36,7 +39,7 @@ function F_Din_R_Est(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,
 
     # Pega apenas os valores iniciais da restrição
     if tipo == 0
-        Y0 = Array{Float64}(uninitialized,2)
+        Y0 = Array{Float64}(undef,2)
         Y0[1] = Din
         Y0[2] = Est
         return Y0,0.0,0.0,0.0
@@ -68,7 +71,7 @@ function F_Din_R_Est(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,
     elseif tipo == 3
 
         # Inicializa a derivada interna
-        dL = Array{Float64}(uninitialized,nel)
+        dL = Array{Float64}(undef,nel)
 
         # Valor para correção da derivada
         corr_min = 1.0 - vmin
