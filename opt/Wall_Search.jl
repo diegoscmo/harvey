@@ -4,7 +4,7 @@
 #
 # Busca em linha
 #
-function Wall_Search(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1},
+function Wall_Search(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Float64,1},
                       dir::Array{Float64,1}, tol_int::Float64, minimo::Float64,
                       nnos::Int64, nel::Int64, ijk::Array{Int64,2}, ID::Array{Int64,2},
                       K0::Array{Float64,2}, M0::Array{Float64,2},

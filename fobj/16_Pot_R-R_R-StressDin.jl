@@ -5,12 +5,15 @@
 #
 # Define o Função Objetivo de Potência + Flexibilidade Estática, restrição no R
 #
-function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, tipo::Int64,
+function F_Obj(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Float64,1}, tipo::Int64,
      nnos::Int64, nel::Int64, ijk::Array{Int64,2}, ID::Array{Int64,2}, K0::Array{Float64,2},
            M0::Array{Float64,2}, SP::Float64, vmin::Float64, F::Array{Float64,1}, NX::Int64,
               NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2},
             raiof::Float64, Y0::Array{Float64,1}, Sy::Float64, freq::Float64, alfa::Float64,
            beta::Float64, A::Float64, Ye::Float64, CBA::Array{Float64,3}, QP::Float64, csi::Float64, dmax::Float64)
+
+    # Número de rhos para penalização
+    n_rho = 3
 
     # Peso do problema de potência e do estático
     B   = 1.0 - abs(A)
@@ -51,7 +54,8 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
         if A<0.0
             Pa = -Pa
         end
-        return [Pa,FS],0.0,0.0,0.0
+
+        return [Pa,FS],n_rho,0.0,0.0
     end
 
     # Função objetivo original
@@ -98,8 +102,11 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
     # Função Lagrangiana
     elseif tipo == 2
         L = valor_fun
-        for j=1:size(valor_res,1)
-            L += 0.5*rho*max(0.0, valor_res[j] + mult_res[j]/rho)^2.0
+        for j=1:(n_rho-1)
+            L += 0.5*rho[j]*max(0.0, valor_res[j] + mult_res[j]/rho[j])^2.0
+        end
+        for j=n_rho:size(valor_res,1)
+            L += 0.5*rho[n_rho]*max(0.0, valor_res[j] + mult_res[j]/rho[n_rho])^2.0
         end
 
         return L,0.0,0.0,0.0
@@ -117,7 +124,7 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
         dVdx = 1.0/(NX*NY*(1.0-dmax))
 
         # <.> dVdx
-        dLV = rho*max(0.0, valor_res[1] + mult_res[1]/rho)*dVdx
+        dLV = rho[1]*max(0.0, valor_res[1] + mult_res[1]/rho[1])*dVdx
 
         # Problemas adjuntos, começando pela expressão da tensão
         ngl = size(UD,1)
@@ -143,7 +150,7 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
                 # localiza j,k no vetor global de restrições
                 loc = j*4+k-4
                 # Calcula e salva os vetores
-                aux_S1 = rho*max(0.0, valor_res[loc+2]+mult_res[loc+2]/rho)*((1.0+(beta^2.0)*(w^2.0))/(Sy*VM[j,k]))*
+                aux_S1 = rho[n_rho]*max(0.0, valor_res[loc+2]+mult_res[loc+2]/rho[n_rho])*((1.0+(beta^2.0)*(w^2.0))/(Sy*VM[j,k]))*
                          corr_min*xc[j]^(2.0*(SP-QP))*(-adjoint(UDe)*transpose(CBA[:,:,k])*CBA[:,:,k])
 
                 # Monta o aux_Sg sem os gdls presos
@@ -156,7 +163,7 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
         end #for j
 
         # Parte do djunto de R
-        aux_R = -max(0.0, mult_res[2] + rho*valor_res[2])*2.0*adjoint(UD)*(w^2.0*MG - R_bar*KG)
+        aux_R = -max(0.0, mult_res[2] + rho[2]*valor_res[2])*2.0*adjoint(UD)*(w^2.0*MG - R_bar*KG)
 
         # Parte do adjunto de P
         dPdx = -0.5*A*w*F/Y0[1]
@@ -209,13 +216,13 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
                 # localiza j,k no vetor global de restrições
                 loc = j*4+k-4
                 # Acumula dTdx
-                dTdx += rho*max(0.0,valor_res[loc+2]+mult_res[loc+2]/rho)*
+                dTdx += rho[n_rho]*max(0.0,valor_res[loc+2]+mult_res[loc+2]/rho[n_rho])*
                                         (1.0/Sy)*(SP-QP)*(VM[j,k]/(corr_min*xc[j]))
 
             end #for k
 
             # Parte da reativa
-            dR = max(0.0, mult_res[2] + rho*valor_res[2])*adjoint(UDe)*(w^2.0*dMedx - R_bar*dKedx)*UDe
+            dR = max(0.0, mult_res[2] + rho[2]*valor_res[2])*adjoint(UDe)*(w^2.0*dMedx - R_bar*dKedx)*UDe
 
             # Parte da estática (adjunto)
             dS = -0.5*B*transpose(USe)*dKedx*USe/Y0[2]

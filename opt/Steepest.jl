@@ -4,7 +4,7 @@
 #
 # Método de busca baseado no gradiente
 #
-function Steepest(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, max_int::Int64,
+function Steepest(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Float64,1}, max_int::Int64,
              tol_int::Float64, nnos::Int64, nel::Int64, ijk::Array{Int64,2}, ID::Array{Int64,2},
     K0::Array{Float64,2}, M0::Array{Float64,2}, SP::Float64, vmin::Float64, F::Array{Float64,1},
        NX::Int64, NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2},

@@ -30,7 +30,7 @@ include("fobj\\16_Pot_R-R_R-StressDin.jl")
 function main()
 
     # Nome do Arquivo
-    dts = "16_101_S2E5_v049"
+    dts = "16_101_S2E5_v049-5_SEMFSeVOL"
     #caso 92 1350
 
     # Parâmetros da Função Objetivo
@@ -38,11 +38,11 @@ function main()
     alfa        = 0.0       # Amortecimento Proporcional - Massa
     #beta        = 1E-8     # Amortecimento Proporcional - Rigidez
     beta        = 0.1/(2.0*pi*freq)
-    A           = -0.5       # Peso da primeira Fobj (negativo para resonant)
+    A           = -1.0       # Peso da primeira Fobj (negativo para resonant)
     Ye          = 0.999     # Porcentagem da restrição (Est ou R)
     Sy          = 2E5       # Tensão limite
     dini        = 1.0       # Volume inicial
-    dmax        = 0.49      # Restrição de volume
+    dmax        = 0.99      # Restrição de volume
 
     # Parâmetros do Lagrangiano Aumentado
     max_ext     = 30        # Máximo de iteracoes externas

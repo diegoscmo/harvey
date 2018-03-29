@@ -40,7 +40,6 @@ function Analise_Harmonica(freq::Float64, arquivo_saida, nelems::Int64, nnos::In
     Adiciona_Vista_Nodal_Vetorial_Gmsh(nnos, arquivo_saida," Freq $(freq) Hz",
                                       desloc,0.0)
 
-
     println("Análise Harmonica terminada com sucesso")
 end
 

@@ -40,18 +40,28 @@ function Top_Opt(dts::AbstractString, Sy::Float64, freq::Float64, alfa::Float64,
     x = dini*ones(nel)
 
     # Adquire valores iniciais se aplicável
-    valor_0, = F_Obj(x, 1.0, [0.0], 0, nnos, nel, ijk, ID, K0, M0, SP, vmin, F, NX, NY,
+    valor_0, n_rho = F_Obj(x, [1.0], [0.0], 0, nnos, nel, ijk, ID, K0, M0, SP, vmin, F, NX, NY,
                   vizi, nviz, dviz, raiof, [1.0], Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax)
 
+    # Inicializa os rhos
+    rho = rho*ones(n_rho)
+
     # Inicializa vetores e calcula para primeiro display
-    valor_fun, valor_res, to_plot, sigma = F_Obj(x, 1.0, [0.0], 1, nnos, nel, ijk, ID, K0, M0,
+    v_fun, v_res, to_plot, sigma = F_Obj(x, rho, [0.0], 1, nnos, nel, ijk, ID, K0, M0,
                                     SP, vmin, F, NX, NY, vizi, nviz, dviz, raiof,
                                           valor_0, Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax)
-    numres = size(valor_res,1)
-    mult_res  = zeros(numres)
 
-    # Calcula o criterio de atualizacao do c
-    crho_ant = max.(0.,norm(max.(valor_res, -mult_res/rho)))
+    # Inicializa multiplicadores de penalização
+    n_res   = size(v_res,1)
+    mu_res  = zeros(n_res)
+
+    # Calcula o criterio de atualizacao do c, começando pelos individuais
+    crho_ant = zeros(n_rho)
+    for j = 1:n_rho-1
+        crho_ant[j] = max.(0.,norm(max.(v_res[j], -mu_res[j]/rho[j])))
+    end
+    # O ultimo critério engloba os demais (tensão)
+    crho_ant[n_rho] = max.(0.,norm(max.(v_res[n_rho:end], -mu_res[n_rho:end]/rho[n_rho])))
 
     # Carrega execução anterior se houver
     itex = 1
@@ -64,17 +74,17 @@ function Top_Opt(dts::AbstractString, Sy::Float64, freq::Float64, alfa::Float64,
             x = Le_Densidades(string(dts,"_dens_o.pos"), nel)
 
             # Lê arquivo com execução anterior
-            itex,rho,mult_res = Le_Ultima(dts)
+            itex,rho,mu_res = Le_Ultima(dts,n_rho)
 
             println("AVISO: Carregando execução anterior, cuidado com as condições de contorno!")
         else
-            Imprime_0(x, rho, mult_res, valor_fun, valor_res, max_ext, max_int, tol_ext,
+            Imprime_0(x, rho, mu_res, v_fun, v_res, max_ext, max_int, tol_ext,
                       tol_int, dts, nnos, nel, ijk, coord, to_plot, real(sigma), vizi, nviz, dviz, raiof)
         end
 
     else
         # Prepara o plot e primeira saída
-        Imprime_0(x, rho, mult_res, valor_fun, valor_res, max_ext, max_int, tol_ext,
+        Imprime_0(x, rho, mu_res, v_fun, v_res, max_ext, max_int, tol_ext,
                   tol_int, dts, nnos, nel, ijk, coord, to_plot, real(sigma), vizi, nviz, dviz, raiof)
     end
 
@@ -82,32 +92,43 @@ function Top_Opt(dts::AbstractString, Sy::Float64, freq::Float64, alfa::Float64,
     for i_ext=itex:max_ext
 
         # Soluciona o problema interno e salva a derivada
-        x, dL = Steepest(x, rho, mult_res, max_int, tol_int, nnos, nel, ijk, ID, K0, M0,
+        x, dL = Steepest(x, rho, mu_res, max_int, tol_int, nnos, nel, ijk, ID, K0, M0,
                                      SP, vmin, F, NX, NY, vizi, nviz, dviz, raiof,
                                       dts, valor_0, Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax)
 
         # Verifica novos valores da função e restrições
-        valor_fun, valor_res, to_plot, sigma = F_Obj(x, rho, mult_res, 1, nnos, nel, ijk, ID, K0, M0,
+        v_fun, v_res, to_plot, sigma = F_Obj(x, rho, mu_res, 1, nnos, nel, ijk, ID, K0, M0,
                                         SP, vmin, F, NX, NY, vizi, nviz, dviz, raiof,
                                                valor_0, Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax)
 
-        # Atualiza o valor o multiplicador das restricoes (u)
-        mult_res = min.(mult_max, max.(rho*valor_res + mult_res, 0.0))
+        # Atualiza o valor o multiplicador das restricoes (u) e penalização (c)
+        # Começando pelos individuais
+        crho_nov = zeros(n_rho)
+        for j=1:(n_rho-1)
+            mu_res[j] = min.(mult_max, max.(rho[j]*v_res[j] + mu_res[j], 0.0))
+            crho_nov[j] = max.(0.0, norm(max.(v_res[j], -mu_res[j]/rho[j])))
 
-        # Atualiza o multiplicador de penalizacao (c)
-        crho_nov = max.(0.0, norm(max.(valor_res, -mult_res/rho)))
-        #if crho_nov >= 0.9*crho_ant
-            rho = min.(1.1*rho, rho_max)
-        #end # if
+            if crho_nov[j] >= 0.9*crho_ant[j]
+                rho[j] = min.(1.1*rho[j], rho_max)
+            end # if
+        end #for j
+
+        # Depois os restantes
+        mu_res[n_rho:end] = min.(mult_max, max.(rho[n_rho]*v_res[n_rho:end] + mu_res[n_rho:end], 0.0))
+        crho_nov[n_rho] = max.(0.0, norm(max.(v_res[n_rho:end], -mu_res[n_rho:end]/rho[n_rho])))
+
+        if crho_nov[n_rho] >= 0.9*crho_ant[n_rho]
+            rho[n_rho] = min.(1.1*rho[n_rho], rho_max)
+        end # if
 
         # Imprime resultado atual e plota saida para o gmsh
-        Imprime_Ext(x, rho, mult_res, valor_fun, valor_res, i_ext, dts,
+        Imprime_Ext(x, rho, mu_res, v_fun, v_res, i_ext, dts,
                                     nel, to_plot, real(sigma), vizi, nviz, dviz, raiof)
 
         # Verifica os criterios de parada:
-        if  norm(dL)                   <= tol_ext &&  # Condicao de gradiente
-            norm(max.(valor_res, 0.0)) <= tol_ext &&  # Condicao de viabilidade
-            norm(valor_res'*mult_res)  <  tol_ext     # Cond. de complementariedade
+        if  norm(dL)               <= tol_ext &&  # Condicao de gradiente
+            norm(max.(v_res, 0.0)) <= tol_ext &&  # Condicao de viabilidade
+            norm(v_res'*mu_res)    <  tol_ext     # Cond. de complementariedade
             break
         end # if criterios
 
@@ -119,22 +140,15 @@ function Top_Opt(dts::AbstractString, Sy::Float64, freq::Float64, alfa::Float64,
     xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
     xc = @. vmin+(1.0-vmin)*xf
 
-    tipo_analise = "Modal"
-    arquivo_saida = string(dts,"_freq.pos")
+    arquivo_saida = string(dts,"_modal.pos")
     nmodos = 6
 
-    if tipo_analise=="Modal"
-        Analise_Modal(nmodos,K0,M0,nel,nnos,ijk,ID,coord,arquivo_saida,xc,SP)
-    elseif tipo_analise=="Harmonica"
-         Analise_Harmonica(freq,arquivo_saida,nel,nnos,ijk,coord,ID,K0,M0,nos_f,
-                           gdll,alfa,beta,xc,SP)
-    elseif tipo_analise=="Varredura"
-         Varredura(arquivo_saida,fvarredura,nos_monitor,nel,nnos,
+    Analise_Modal(nmodos,K0,M0,nel,nnos,ijk,ID,coord,arquivo_saida,xc,SP)
+    #Analise_Harmonica(freq,arquivo_saida,nel,nnos,ijk,coord,ID,K0,M0,nos_f,
+    #                       gdll,alfa,beta,xc,SP)
+    arquivo_saida = string(dts,"_varred.pos")
+    Varredura(arquivo_saida,fvarredura,nos_monitor,nel,nnos,
                             ijk,coord,ID,K0,M0,nos_f,gdll,alfa,beta,xc,SP)
-    else
-         println("\n Tipo de análise não é válido $tipo_analise")
-    end
-
 
     println(" OK!\n")
 end
