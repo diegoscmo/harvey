@@ -8,3 +8,4 @@ include("Quad4_I.jl")          # Kquad4_I
 include("Monta_Global.jl")     # Global, Expande_Vetor
 include("Gmsh.jl")             # Funções GMSH
 include("Harmonica.jl")        # Cálculo Harmônico
+include("Condicionamento.jl")

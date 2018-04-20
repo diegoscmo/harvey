@@ -39,7 +39,7 @@ function F_Obj(x, rho::Array{Float64,1}, mult_res::Array{Float64,1}, tipo::Int64
 
     # Gera um vetor com as "normas nodais de densidade"
     # Isto poderia estar em uma rotina em separado
-    q = 10.0
+    q = 2.0
     aj = zeros(nnos)
     for j=1:nnos
 
@@ -54,10 +54,10 @@ function F_Obj(x, rho::Array{Float64,1}, mult_res::Array{Float64,1}, tipo::Int64
         aj[j] = vaj^(1.0/q)
     end
 
-    P = 2.0
+    P = 12.0
 
    # Para montar o a_N
-   #vaj = ones(nnos)
+   # vaj = ones(nnos)
 
    a_N = 0.0
    for j=1:nnos

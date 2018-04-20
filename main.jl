@@ -6,27 +6,25 @@
 # cd(ENV["HARVEY"]); include("main.jl"); main();
 
 # Carrega rotinas
-include("fem\\Rotinas_Fem.jl")      # Rotinas de Elementos Finitos
-include("opt\\Top_Opt.jl")          # Rotinas de LA e Topológica
-include("opt\\Dif_Fin.jl")
-include("fem\\Condicionamento.jl")
+include("fem/Rotinas_Fem.jl")      # Rotinas de Elementos Finitos
+include("opt/Top_Opt.jl")          # Rotinas de LA e Topológica
 
 # Escolher função objetivo
-#include("fobj\\1_Estatico.jl")
-#include("fobj\\2_Dinamico.jl")
-#include("fobj\\3_Din_R-Est.jl")
-#include("fobj\\4_Din_A-Est.jl")
-#include("fobj\\5_Potencia.jl")
-#include("fobj\\6_Pot_R-Est.jl")
-#include("fobj\\7_Pot_A-Est.jl")
-#include("fobj\\8_Pot_A-Est_R-R.jl")
-#include("fobj\\11_Est_R-V_R-Stress.jl")
-#include("fobj\\12_Vol_R-Stress.jl")
-#include("fobj\\13_Vol_R-StressDin.jl")
-#include("fobj\\15_Pot_R-R_R-Stress.jl")
-#include("fobj\\16_Pot_R-R_R-StressDin.jl")
-#include("fobj\\17_Nor_R-R_R-StressDin.jl")
-include("fobj\\18_Nor_R-R_R-StressDin_Test.jl")
+#include("fobj/1_Estatico.jl")
+#include("fobj/2_Dinamico.jl")
+#include("fobj/3_Din_R-Est.jl")
+#include("fobj/4_Din_A-Est.jl")
+#include("fobj/5_Potencia.jl")
+#include("fobj/6_Pot_R-Est.jl")
+#include("fobj/7_Pot_A-Est.jl")
+#include("fobj/8_Pot_A-Est_R-R.jl")
+#include("fobj/11_Est_R-V_R-Stress.jl")
+#include("fobj/12_Vol_R-Stress.jl")
+#include("fobj/13_Vol_R-StressDin.jl")
+#include("fobj/15_Pot_R-R_R-Stress.jl")
+#include("fobj/16_Pot_R-R_R-StressDin.jl")
+#include("fobj/17_Nor_R-R_R-StressDin.jl")
+include("fobj/18_Nor_R-R_R-StressDin_Test.jl")
 
 #
 # Entrada de dados + execução da rotina
@@ -34,7 +32,7 @@ include("fobj\\18_Nor_R-R_R-StressDin_Test.jl")
 function main()
 
     # Nome do Arquivo
-    dts = "64_NMOD_W_P2_1800"
+    dts = "64_NMOD_W_Q2_1800"
 
     # Parâmetros da Função Objetivo
     freq        = 750.0    # Frequência de excitação

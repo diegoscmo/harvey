@@ -5,6 +5,9 @@
 #
 #
 #
+"""
+   Gera a malha,,,,
+"""
 function GeraMalha(nnos::Int64, nelems::Int64, LX::Float64, LY::Float64, NX::Int64, NY::Int64,
                    presos::Array{Float64,2}, forcas::Array{Float64,2})
 
