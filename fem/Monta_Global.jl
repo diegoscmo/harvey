@@ -4,7 +4,7 @@
 #
 #
 #
-function Global_KM(densidades::Array{Float64,1}, nelems::Int64, ijk::Array{Int64,2},
+function Global_KM(densidades, nelems::Int64, ijk::Array{Int64,2},
                    ID::Array{Int64,2}, K0::Array{Float64,2}, M0::Array{Float64,2},
                    simp::Float64, vminimo::Float64)
 
@@ -27,30 +27,32 @@ function Global_KM(densidades::Array{Float64,1}, nelems::Int64, ijk::Array{Int64
      V = Array{Float64}(undef,8*8*nelems)
      W = Array{Float64}(undef,8*8*nelems)
 
-     for el = 1:nelems
+      for el = 1:nelems
         # rotina para determinacao dos vetores para montagem da matriz esparsa
         # Modificação Olhoff & Du pag 94/95 eq 5.19-20
+        #vmin = 1E-9
+        #kfator = vmin + (densidades[el]^simp)*(1.0-vmin)
+        #mfator = vmin + massadens[el]*(1.0-vmin)
         kfator = densidades[el]^simp
         mfator = massadens[el]
+
         (glg,gll) = gl_livres_elemento(el,ijk,ID)
-         @inbounds for i = 1:length(glg)
-                        glgi =  glg[i]
-                        glli =  gll[i]
-                        @inbounds for j = 1: length(glg)
-                                  glgj =  glg[j]
-                                  gllj =  gll[j]
-                                  # Monta só a parte superior
-                                  #if glgj>=glgi
-                                     I[contador] = glgi
-                                     J[contador] = glgj
-
-                                     # Corrige o valor mínimo na montagem da matriz
-       	                             V[contador] = kfator*K0[glli,gllj]
-                                     W[contador] = mfator*M0[glli,gllj]
-
-                                     contador = contador + 1
-                                #end # if U
-                        end #j
+        for i = 1:length(glg)
+            glgi =  glg[i]
+            glli =  gll[i]
+            for j = 1: length(glg)
+                 glgj =  glg[j]
+                 gllj =  gll[j]
+                 # Monta só a parte superior
+                  #if glgj>=glgi
+                 I[contador] = glgi
+                 J[contador] = glgj
+                 # Corrige o valor mínimo na montagem da matriz
+       	         V[contador] = kfator*K0[glli,gllj]
+                 W[contador] = mfator*M0[glli,gllj]
+                 contador = contador + 1
+                #end # if U
+            end #j
        end #i
     end #e
 

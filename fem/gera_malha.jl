@@ -86,77 +86,106 @@ function GeraMalha(nnos::Int64, nelems::Int64, LX::Float64, LY::Float64, NX::Int
               gls_presos[ngl_preso,1] = no
               gls_presos[ngl_preso,2] = dir
            end #if
+       end #no
+   end #i
 
+   # Monta a matriz ID, que informa o grau de liberdade global
+   # associado a um no/direcao
+   ID = zeros(Int64,nnos,2)
+   contador_global::Int64 = 1
+
+   for no=1:nnos
+     for gl=1:2
+        # Procura por no,gl nas informacoes
+        # de condicoes de contorno. Se existirem,
+        # pula o gl e deixa com zero. Do contrario,
+        # coloca o contador_global e incrementa
+        flag_preso = false
+        for i=1:ngl_preso
+            if no==gls_presos[i,1] && gl==gls_presos[i,2]
+               flag_preso = true
+               break
+            end #if
+        end #i
+         if !flag_preso
+             ID[no,gl] = contador_global
+             contador_global += 1
+         end
+    end #gl
+   end #no
+   contador_global = contador_global - 1
+
+
+   ### MONTA AS FORCAS ###
+
+
+
+   # Para cada região com informacoes de condições de contorno,
+   # varremos todos os nós que podem estar dentro do retângulo
+   # Informacoes em cada linha de presos: xi, yi, xf, yf, direcao
+
+   nos_forcas  = zeros(nnos,3)
+
+   nforcas_tot = 0
+
+   for i=1:nforcas
+
+       ngl_forcas::Int64 = 0
+       gls_forcas = zeros(Int64,nnos,3)
+
+       # Pega as informacoes do retangulo
+       xi = forcas[i,1]
+       yi = forcas[i,2]
+       xf = forcas[i,3]
+       yf = forcas[i,4]
+       dir = convert(Int64,forcas[i,6])
+
+       # Loop por todos os nos da malha pra ver onde estão as forças i
+       for no=1:nnos
+
+           # Pega as coordenadas do nó
+           x = elcoor[no,1]
+           y = elcoor[no,2]
+
+           if (x>=xi-tol) && (x<=xf+tol) && (y>=yi-tol) && (y<=yf+tol)
+              ngl_forcas +=1
+              gls_forcas[ngl_forcas,1] = no
+              gls_forcas[ngl_forcas,2] = dir
+           end #if
 
        end #no
 
+       # corta a gordura do vetor
+      gls_forcas =  gls_forcas[1:ngl_forcas,:]
+
+      #
+      # Aplica forcas nodais "locais" (de i)
+      # x,y,valor,direcao
+      loc_forcas = zeros(ngl_forcas,3) # no, dir, valor
+
+      # Insere as forças em um vetor local
+      for j=1:ngl_forcas
+
+          loc_forcas[j,1] = gls_forcas[j,1]
+          loc_forcas[j,2] = gls_forcas[j,2]
+          loc_forcas[j,3] = forcas[i,5]/(ngl_forcas-1)
+
+          # Se for primeiro ou ultimo nó, divide a força por 2
+          if j==1 || j==ngl_forcas
+              loc_forcas[j,3] = loc_forcas[j,3]/2.0
+          end
+
+      end #loop das informacoes de forca
+
+
+      # Acumula as forças no global
+      nos_forcas[1+nforcas_tot:nforcas_tot+ngl_forcas,:] = loc_forcas[:,:]
+      nforcas_tot += ngl_forcas
+
    end #i
 
-
-  #
-  # Aplica forcas nodais
-  # Informacoes em cada linha de forcas
-  # x,y,valor,direcao
-  nos_forcas = zeros(nforcas,3) # no, dir, valor
-
-  for i=1:nforcas
-
-      # Dados do nó
-      x = forcas[i,1]
-      y = forcas[i,2]
-      valor = forcas[i,3]
-      dir = forcas[i,4]
-
-      # Loop pelos nós
-      gravou = false
-      for no=1:nnos
-
-          xn = elcoor[no,1]
-          yn = elcoor[no,2]
-
-          if abs(x-xn)<=tol && abs(y-yn)<=tol
-             nos_forcas[i,1] = no
-             nos_forcas[i,2] = dir
-             nos_forcas[i,3] = valor
-             gravou = true
-             break
-           end #if
-      end #loop dos nos
-
-      # Testa se a forca achou o seu nó
-      if !gravou
-         error("A forca nao foi aplicada")
-      end
-
-  end #loop das informacoes de forca
-
-
-  # Monta a matriz ID, que informa o grau de liberdade global
-  # associado a um no/direcao
-  ID = zeros(Int64,nnos,2)
-  contador_global::Int64 = 1
-
-  for no=1:nnos
-    for gl=1:2
-       # Procura por no,gl nas informacoes
-       # de condicoes de contorno. Se existirem,
-       # pula o gl e deixa com zero. Do contrario,
-       # coloca o contador_global e incrementa
-       flag_preso = false
-       for i=1:ngl_preso
-           if no==gls_presos[i,1] && gl==gls_presos[i,2]
-              flag_preso = true
-              break
-           end #if
-       end #i
-        if !flag_preso
-            ID[no,gl] = contador_global
-            contador_global += 1
-        end
-   end #gl
-  end #no
-  contador_global = contador_global - 1
-
+   # trima o vetor de forcas
+   nos_forcas = nos_forcas[1:nforcas_tot,:]
 
    # Retorna as informacoes da malha
    return elcoor, ijk, nos_forcas, ID, contador_global
@@ -175,8 +204,8 @@ function gl_livres_elemento(elemento::Int64,ijk::Array{Int64,2},ID::Array{Int64,
 
     contador_local::Int64 = 1
     contador_global::Int64 = 1
-    @inbounds for no in ijk[elemento,:]
-       @inbounds  for j = 1:2
+    for no in ijk[elemento,:]
+       for j = 1:2
             gl = ID[no,j]
             if gl > 0
                glg[contador_global] = gl

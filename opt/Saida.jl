@@ -10,12 +10,12 @@ function Imprime_Int(i_int::Int64, contaev::Int64, norma::Float64, dts::Abstract
     t = tmp/60.0
     @printf("  \t\tpassos internos: %d | T: %.3f mins | evals: %d | dL: %.3e\n",i_int,t,contaev,norma)
 
-    if dts !=  "OFF"
-        file1 = string(dts,"_log.txt")
-        saida  = open(file1,"a")
-        @printf(saida,"  \t\tpassos internos: %d | T: %.3f mins | evals: %d | dL: %.3e\n",i_int,t,contaev,norma)
-        close(saida)
-    end
+    #if dts !=  "OFF"
+        #file1 = string("results\\",dts,"\\",dts,"_log.txt")
+        #saida  = open(file1,"a")
+        #@printf(saida,"  \t\tpassos internos: %d | T: %.3f mins | evals: %d | dL: %.3e\n",i_int,t,contaev,norma)
+        #close(saida)
+    #end
 end
 
 function Imprime_Ext(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Float64,1},
@@ -38,29 +38,33 @@ function Imprime_Ext(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array
 
     if dts !=  "OFF"
     # Abre os arquivos
-        fmesh  = string(dts,"_dens_o.pos")
-        fmesh2 = string(dts,"_dens_f.pos")
-        fmesh3 = string(dts,"_stress.pos")
-        fmesh4 = string(dts,"_dens_H.pos")
-        file1  = string(dts,"_log.txt")
-        file2  = string(dts,"_monitora.txt")
-        file3  = string(dts,"_save.txt")
+        fmesh  = string("results\\",dts,"\\",dts,"_dens_o.pos")
+        fmesh2 = string("results\\",dts,"\\",dts,"_dens_f.pos")
+        fmesh3 = string("results\\",dts,"\\",dts,"_stress.pos")
+        #fmesh4 = string("results\\",dts,"\\",dts,"_dens_H.pos")
+        #file1  = string("results\\",dts,"\\",dts,"_log.txt")
+        file2  = string("results\\",dts,"\\",dts,"_monitora.txt")
+        file3  = string("results\\",dts,"\\",dts,"_save.txt")
 
-        saida  = open(file1,"a")
+        #saida  = open(file1,"a")
         saida2 = open(file2,"a")
 
-        @printf(saida,"\n  iter: %d \torigin. fitness: %.6e\tvolume:\t%.5f ", i_ext, valor_fun, vol)
-        @printf(saida,"\n  rho: %.3f", mean(rho))
-        @printf(saida," \tmults. lagrange: ")
-        show(saida,mean(mult_res));
-        @printf(saida,"\n\t\tval. restrições: ")
-        show(saida,mean(valor_res));
-        @printf(saida,"\n")
+        #@printf(saida,"\n  iter: %d \torigin. fitness: %.6e\tvolume:\t%.5f ", i_ext, valor_fun, vol)
+        #@printf(saida,"\n  rho: %.3f", mean(rho))
+        #@printf(saida," \tmults. lagrange: ")
+        #show(saida,mean(mult_res));
+        #@printf(saida,"\n\t\tval. restrições: ")
+        #show(saida,mean(valor_res));
+        #@printf(saida,"\n")
 
-        close(saida)
+        #close(saida)
 
         # Plots de valores
         s_toplot = size(to_plot,1)
+        if i_ext == 0
+            @printf(saida2, "v_fun      PaN       FSN       Vol       R         maxS      freqs...\n")
+        end
+
         for j = 1:s_toplot
             @printf(saida2, "%.3e ", to_plot[j])
         end
@@ -84,7 +88,7 @@ function Imprime_Ext(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array
         Adiciona_Vista_Escalar_Gmsh(fmesh, "x", nel, x, Float64(i_ext))
         Adiciona_Vista_Escalar_Gmsh(fmesh2, "xf", nel, xf, Float64(i_ext))
         Adiciona_Vista_Nodal_Tensor_Gmsh(fmesh3, nel, "S", TS, Float64(i_ext))
-        Adiciona_Vista_Escalar_Gmsh(fmesh4, "xh", nel, xh, Float64(i_ext))
+        #Adiciona_Vista_Escalar_Gmsh(fmesh4, "xh", nel, xh, Float64(i_ext))
 
     end
 
@@ -97,39 +101,36 @@ function Imprime_0(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{F
                       nel::Int64, ijk::Array{Int64,2}, coord::Array{Float64,2}, to_plot::Array{Float64,1}, TS::Array{Float64,2},
                       vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2}, raiof::Float64)
 
-    # Verifica se precisa imprimir arquivos
-    if dts !=  "OFF"
 
-        # Abre os arquivos
-        fmesh  = string(dts,"_dens_o.pos")
-        fmesh2 = string(dts,"_dens_f.pos")
-        fmesh3 = string(dts,"_stress.pos")
-        fmesh4 = string(dts,"_dens_h.pos")
-        file1  = string(dts,"_log.txt")
-        file2  = string(dts,"_monitora.txt")
-        file3  = string(dts,"_save.txt")
+    if isdir(string("results\\",dts)) == false
+        mkdir(string("results\\",dts))
+    end
 
-        # Remove se já existir
-        if isfile(fmesh);  rm(fmesh);  end
-        if isfile(fmesh2); rm(fmesh2); end
-        if isfile(fmesh3); rm(fmesh3); end
-        if isfile(fmesh4); rm(fmesh4); end
-        if isfile(file1);  rm(file1);  end
-        if isfile(file2);  rm(file2);  end
-        if isfile(file3);  rm(file3);  end
+    # Abre os arquivos
+    fmesh  = string("results\\",dts,"\\",dts,"_dens_o.pos")
+    fmesh2 = string("results\\",dts,"\\",dts,"_dens_f.pos")
+    fmesh3 = string("results\\",dts,"\\",dts,"_stress.pos")
+    #fmesh4 = string("results\\",dts,"\\",dts,"_dens_h.pos")
+    #file1  = string("results\\",dts,"\\",dts,"_log.txt")
+    file2  = string("results\\",dts,"\\",dts,"_monitora.txt")
+    file3  = string("results\\",dts,"\\",dts,"_save.txt")
 
-        # Imprime pro log
-        saida  = open(file1,"a")
-        println(saida,"\n  LagAug:: ",dts)
-        println(saida,"\n  Nelems:: ",nel," | Iter:: ",max_ext,"/",max_int," | Tol:: ",tol_ext,"/",tol_int)
-        close(saida)
+    # Remove se já existir
+    #if isfile(file1);  rm(file1);  end
+    if isfile(file2);  rm(file2);  end
+    if isfile(file3);  rm(file3);  end
+
+    # Imprime pro log
+    #saida  = open(file1,"a")
+    #println(saida,"\n  LagAug:: ",dts)
+    #println(saida,"\n  Nelems:: ",nel," | Iter:: ",max_ext,"/",max_int," | Tol:: ",tol_ext,"/",tol_int)
+    #close(saida)
 
         # Imprime malha no gmsh
         Inicializa_Malha_Gmsh(fmesh, nnos, nel, ijk, coord, 2)
         Inicializa_Malha_Gmsh(fmesh2, nnos, nel, ijk, coord, 2)
         Inicializa_Malha_Gmsh(fmesh3, nnos, nel, ijk, coord, 2)
-        Inicializa_Malha_Gmsh(fmesh4, nnos, nel, ijk, coord, 2)
-    end #if
+        #Inicializa_Malha_Gmsh(fmesh4, nnos, nel, ijk, coord, 2)
 
     # Dá o print do console
     println("\n  LagAug:: ",dts)
@@ -139,6 +140,42 @@ function Imprime_0(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{F
     Imprime_Ext(x, rho, mult_res, valor_fun, valor_res, 0, dts, nel,
                                     to_plot, TS, vizi, nviz, dviz, raiof)
 
+end
+
+function Imprime_Caso(dts, Sy, freq, alfa, beta, R_b, A, dini, max_ext, max_int, tol_ext,
+           tol_int, rho, rho_max, mult_max, SP, raiof, vmin, NX, NY, LX, LY,
+                       young, poisson, esp, p_dens, presos, forcas, QP, csi, dmax)
+
+                       if isdir(string("results\\",dts)) == false
+                           mkdir(string("results\\",dts))
+                       end
+
+    file = string("results\\",dts,"\\",dts,"_caso.txt")
+    if isfile(file);  rm(file);  end
+    saida = open(file,"a")
+
+    matriz1 = [ "filename:" dts; " " " ";
+                "# Parametros da Fobj" " "; "freq" freq; "alfa" alfa; "beta" beta;
+                "A   " A; "Rb  " R_b; "Sy  " Sy; "dini" dini; "dmax" dmax; " " " ";
+                "# Parametros do Lagrangiano Aumentado" " "; "max_ext" max_ext;
+                "max_int" max_int; "tol_ext" tol_ext; "tol_int" tol_int;
+                "rho_max" rho_max; "mul_max" mult_max;
+                " " " "; "# Penalização inicial" "";]
+
+    matriz2 = [ " " " ";"# Parâmetros da topológica" " "; "SP   " SP; "QP   " QP;
+                "raiof" raiof; "vmin " vmin; "nel  " NX*NY]
+
+    for j=1:size(matriz1,1)
+        println(saida,matriz1[j,1], " ", matriz1[j,2])
+    end
+    for j=1:size(rho,1)
+        println(saida,"rho$j", " ", rho[j])
+    end
+    for j=1:size(matriz2,1)
+        println(saida,matriz2[j,1], " ", matriz2[j,2])
+    end
+
+    close(saida)
 end
 
 #
@@ -175,7 +212,6 @@ end
 function Le_Ultima(arquivo::String,n_rho::Int64)
 
     # Le arquivo
-    arquivo  = string(arquivo,"_save.txt")
     texto = readlines(arquivo)
 
     # Número da próxima iteração

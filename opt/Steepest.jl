@@ -5,11 +5,17 @@
 # Método de busca baseado no gradiente
 #
 function Steepest(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Float64,1}, max_int::Int64,
-             tol_int::Float64, nnos::Int64, nel::Int64, ijk::Array{Int64,2}, ID::Array{Int64,2},
+             tol_int::Float64, nnos::Int64, nel::Int64, ijk::Array{Int64,2}, coord::Array{Float64,2}, ID::Array{Int64,2},
     K0::Array{Float64,2}, M0::Array{Float64,2}, SP::Float64, vmin::Float64, F::Array{Float64,1},
        NX::Int64, NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2},
              raiof::Float64 ,dts::String, valor_0::Array{Float64,1}, Sy::Float64, freq::Float64,
-      alfa::Float64, beta::Float64, A::Float64, Ye::Float64, CBA::Array{Float64,3}, QP::Float64, csi::Float64, dmax::Float64)
+      alfa::Float64, beta::Float64, A::Float64, Ye::Float64, CBA::Array{Float64,3}, QP::Float64, csi::Float64,
+      dmax::Float64, trava_els::Array{Int64,1},nos_viz,i_ext)
+
+    # Na primeira iteração externa, dobra o número de internas
+    if i_ext == 1
+        max_int = 2*max_int
+    end
 
     # Parâmetros, passo mínimo e máximo de iterações estagnado
     minimo    = 1E-5*(nel^0.5)
@@ -25,28 +31,21 @@ function Steepest(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Fl
     norma   = 0.0
 
     # Passo Inicial
-    passo0 = 0.25*(nel^0.5)
-
-    # Lagrangiano no ponto de partida
-    L0, = F_Obj(x, rho, mult_res, 2, nnos, nel, ijk, ID, K0, M0, SP, vmin,
-                                 F, NX, NY, vizi, nviz, dviz, raiof, valor_0,
-                                 Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax)
+    passo0 = 0.10*(nel^0.5)
 
     # Laço interno + cronômetro
     tmp = @elapsed for i=1:max_int
 
         # Calcula sensibilidade #F_Obj_DF = diferenças finitas + impressão
-        dL, = F_Obj(x, rho, mult_res, 3, nnos, nel, ijk, ID, K0, M0, SP, vmin,
+        dL,L0, = F_Obj(x, rho, mult_res, 3, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin,
                                      F, NX, NY, vizi, nviz, dviz, raiof, valor_0,
-                                     Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax)
+                                     Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax,nos_viz,dts)
         contaev += 1
 
-        # Bloqueia a direcao e zera o gradiente se bloqueado
-        @inbounds for j=1:nel
-            if dL[j] > 0.0 && x[j] <= 0.0
-                dL[j]  = 0.0
-            elseif dL[j] < 0.0 && x[j] >= 1.0
-                dL[j]  = 0.0
+        # Bloqueia a direcao
+        for j=1:nel
+            if (dL[j] > 0.0 && x[j] <= 0.0) || (dL[j] < 0.0 && x[j] >= 1.0)
+                dL[j] = 0.0
             end
         end
 
@@ -60,10 +59,10 @@ function Steepest(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Fl
         end
 
         # Search na direção do Steepest
-        (alpha, conta_line, L0) = Wall_Search(x, rho, mult_res, dir, tol_int,
-                                minimo, nnos, nel, ijk, ID, K0, M0, SP, vmin, F, NX, NY, vizi,
+        (alpha, conta_line) = Wall_Search(x, rho, mult_res, dir, tol_int,
+                                minimo, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin, F, NX, NY, vizi,
                                 nviz, dviz, raiof, passo0, L0, valor_0,
-                                Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax)
+                                Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax, trava_els,nos_viz,dts)
         contaev += conta_line
         i_int += 1
 
@@ -79,9 +78,12 @@ function Steepest(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Fl
         end
 
         # Bloqueia o x se passar
-        @inbounds for j=1:nel
+        for j=1:nel
             x[j] = min(1.0,max(x[j],0.0))
         end
+
+        # Trava elementos
+        x = Trava_Els(x,trava_els)
 
         # Critério adicional de saída
         if alpha <= minimo

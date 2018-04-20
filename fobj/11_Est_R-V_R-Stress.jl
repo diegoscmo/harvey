@@ -16,7 +16,7 @@ function F_Est_S(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, 
     xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
 
     # Corrige x com vmin
-    xc = broadcast(+,vmin,(1.0-vmin)*xf)
+    xc = @. vmin+(1.0-vmin)*xf
 
     # Remonta matriz de rigidez global, aqui é aplicado o SIMP
     KG, = Global_KM(xf, nel, ijk, ID, K0, M0, SP, vmin)
@@ -34,7 +34,7 @@ function F_Est_S(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, 
     end
 
     # Função objetivo normalizada #FIXME
-    valor_fun = Est #/ Y0[1]
+    valor_fun = Est / Y0[1]
 
     # Calcula as tensões sigma
     USx = Expande_Vetor(US, nnos, ID)

@@ -46,7 +46,6 @@ function Kquad4_I(elem::Int64, coord::Array{Float64,2}, conect::Array{Int64,2},
 
     K = Kaa - transpose(Kba)*invKbbKba
 
-
     # Matriz A
     A = vcat(Matrix{Float64}(I,8,8),-invKbbKba)
 

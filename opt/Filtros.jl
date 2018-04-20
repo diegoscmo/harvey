@@ -1,6 +1,70 @@
 ################################################################################
 #####                                Filtros                              ######
 ################################################################################
+
+#
+# Verifica se elementos estão na área de travamento e devolve
+#
+function Proc_Travas(nel::Int64, coord::Array{Float64,2}, conect::Array{Int64,2}, travas::Array{Float64,2})
+
+    # Número de regiões de trava
+    ntravas = size(travas,1)
+
+    # Inicializa o número de travados e o vetor para captura
+    ntravados = 0
+    trava_els = zeros(Int64,nel)
+
+    # Varre pelo número de travas
+    for i=1:ntravas
+
+        # Renomeia as travas em questão
+        xi = travas[i,1]
+        yi = travas[i,2]
+        xf = travas[i,3]
+        yf = travas[i,4]
+
+        # Varre os elementos
+        for j=1:nel
+
+            # Define o centro do elemento utilizando nós 1 e 3
+            n1 = conect[j,1]
+            n3 = conect[j,3]
+            xcj = (coord[n1,1]+coord[n3,1])/2.0
+            ycj = (coord[n1,2]+coord[n3,2])/2.0
+
+            # Verifica se está dentro do quadrado
+            if (xcj >= xi) && (xcj <= xf) && (ycj >= yi) && (ycj <= yf)
+
+                # Se estiver, adiciona no vetor e incrementa o ntravados
+                ntravados += 1
+                trava_els[ntravados] = j
+
+            end #if
+        end #for.j
+    end #for.i
+
+    #  Remove o excesso de trava_els
+    trava_els = trava_els[1:ntravados]
+
+    return trava_els
+end #Proc_Travas
+
+#
+# Bloqueia os elementos em trava_els
+#
+function Trava_Els(x::Array{Float64,1},trava_els::Array{Int64,1})
+
+    # Varre e trava
+    for j=1:size(trava_els,1)
+        el = trava_els[j]
+        x[el] = 1.0
+    end
+
+    return x
+
+end #Trava_Els
+
+
 #
 # Identifica os vizinhos de cada elemento e a distancia entre eles
 #
@@ -55,17 +119,47 @@ function Proc_Vizinhos(nel::Int64, coord::Array{Float64,2}, conect::Array{Int64,
     return vizi,nviz,dviz
 end
 
+function Proc_Vizinhos_Nos(ijk, nnos, nelems)
+
+   # Declara uma lista que irá conter as listas
+   lista = []
+
+   # Loop por todos os nós
+   for no=1:nnos
+
+       # Lista de vizinhos deste nó
+       lista_no = Int64[]
+
+       # Loop pelos elementos
+       for ele=1:nelems
+
+           # Se o no estiver nas conectividades, coloca na lista
+           if no in ijk[ele,:]
+               push!(lista_no,ele)
+           end
+
+       end #ele
+
+       # Adiciona a lista de vizinhos deste nó
+       push!(lista,lista_no)
+
+   end #no
+
+   return lista
+
+   end
+
 #
 # Aplica filtro de densidades, pág 65
 #
 function Filtro_Dens(xi::Array{Float64,1},nel::Int64,vizi::Array{Int64,2},
     nviz::Array{Int64,1},dviz::Array{Float64,2},raiof::Float64)
 
-    # Inicializa vetor de saída
+    # Inicializa vetor de saída (ñ pode ser undef)
     xo = zeros(Float64,nel)
 
     # Varre os elementos
-    @inbounds for ele = 1:nel
+    for ele = 1:nel
 
         # Zera acumuladores
         dividen = 0.0
@@ -74,10 +168,9 @@ function Filtro_Dens(xi::Array{Float64,1},nel::Int64,vizi::Array{Int64,2},
         nvizk = nviz[ele]
 
         # Acumula somatórios para cada vizinho de k
-        @inbounds for viz = 1:nvizk
+        for viz = 1:nvizk
 
             dist = dviz[ele,viz]
-            #pesoH    = raiof - dist
             pesoH    = 1.0 - dist/raiof
 
             vz = vizi[ele,viz]
@@ -99,7 +192,7 @@ end
 function dL_Dens(dL::Array{Float64,1},nel::Int64,vizi::Array{Int64,2},
     nviz::Array{Int64,1},dviz::Array{Float64,2},raiof::Float64)
 
-    # Inicializa o vetor das derivadas corrigidas
+    # Inicializa o vetor das derivadas corrigidas (ñ pode ser undef)
     dLo = zeros(Float64,nel)
 
     # Varre m elementos
@@ -109,7 +202,7 @@ function dL_Dens(dL::Array{Float64,1},nel::Int64,vizi::Array{Int64,2},
         vizm = vizi[m,1:nviz[m]]
 
         # Varre os vizinhos de m
-        @inbounds for k in vizm
+        for k in vizm
 
             # Posição de m na tabela de vizinhanca
             pos = findfirst(==(m),vizi[k,1:nviz[k]])
@@ -119,7 +212,7 @@ function dL_Dens(dL::Array{Float64,1},nel::Int64,vizi::Array{Int64,2},
 
             # Loop para denominador da filtragem, Hjk
             soma = 0.0
-            @inbounds for j=1:nviz[k]
+            for j=1:nviz[k]
                 soma += 1.0 - dviz[k,j]/raiof
             end #j
 
@@ -221,7 +314,7 @@ function dL_Heavi(dL::Array{Float64,1},nel::Int64,vizi::Array{Int64,2},
         vizm = vizi[m,1:nviz[m]]
 
         # Varre os vizinhos de m
-        @inbounds for k in vizm
+        for k in vizm
 
             # Posição de m na tabela de vizinhanca
             pos = findfirst(equalto(m),vizi[k,1:nviz[k]])
@@ -231,7 +324,7 @@ function dL_Heavi(dL::Array{Float64,1},nel::Int64,vizi::Array{Int64,2},
 
             # Loop para denominador da filtragem, Hjk
             soma = 0.0
-            @inbounds for j=1:nviz[k]
+            for j=1:nviz[k]
                 soma += 1.0 - dviz[k,j]/raiof
             end #j
 

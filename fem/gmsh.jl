@@ -7,6 +7,9 @@
 #
 function Inicializa_Malha_Gmsh(nome_arquivo::String,nnos,nelems,conec,coord,dimensao=2)
 
+    # Verifica se já existe o arquivo, se sim, remove
+    if isfile(nome_arquivo); rm(nome_arquivo); end
+
     # Abre o arquivo para escrita
     saida = open(nome_arquivo,"w")
 
