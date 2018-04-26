@@ -11,7 +11,7 @@ function Inicializa_Malha_Gmsh(nome_arquivo::String,nnos,nelems,conec,coord,dime
     if isfile(nome_arquivo); rm(nome_arquivo); end
 
     # Abre o arquivo para escrita
-    saida = open(nome_arquivo,"w")
+    saida = open(nome_arquivo,"a")
 
     # Cabecalho do gmsh
     println(saida,"\$MeshFormat")
@@ -63,11 +63,11 @@ function Adiciona_Vista_Nodal_Escalar_Gmsh(nome_arquivo::String,nome_vista::Stri
 
 
     # Tenta abrir o arquivo para append
-    saida = try
-                open(nome_arquivo,"a")
-    catch
-        error("ERROR::Adiciona_Vista_Nodal_Escalar_Gmsh:: Nao foi possivel acessar $nome_arquivo")
+    if isfile(nome_arquivo)==false
+            error("ERROR::Adiciona_Vista_Nodal_Escalar_Gmsh:: Nao foi possivel acessar $nome_arquivo")
     end
+
+    saida = open(nome_arquivo,"a")
 
 
     # Verifica se a dimensao esta correta
@@ -130,7 +130,7 @@ function Adiciona_Vista_Escalar_Gmsh(nome_arquivo::String,nome_vista::String,nel
     println(saida,"1")
     println(saida,nelems)
     for i=1:nelems
-        println(saida,i," ",round(escalares[i],15))
+        println(saida,i," ",round(escalares[i],digits=15))
     end
     println(saida,"\$EndElementData")
 

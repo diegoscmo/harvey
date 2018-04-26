@@ -12,7 +12,7 @@ function Wall_Search(xn::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Arra
                       NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1},
                       dviz::Array{Float64,2}, raiof::Float64, passo0::Float64,L0::Float64, valor_0::Array{Float64,1},
                       Sy::Float64, freq::Float64, alfa::Float64, beta::Float64, A::Float64, Ye::Float64,
-                      CBA::Array{Float64,3}, QP::Float64, csi::Float64, dmax::Float64, trava_els::Array{Int64,1},nos_viz,dts)
+                      CBA::Array{Float64,3}, QP::Float64, csi::Float64, dmax::Float64, trava_els::Array{Int64,1},nos_viz,dts,P,q)
 
     # Declaração de variáveis
     conta_line = 0      # Contador
@@ -36,7 +36,7 @@ function Wall_Search(xn::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Arra
         # Cálcula a função na posição nova
         L1, = F_Obj(xn, rho, mult_res, 2, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin,
                                               F, NX, NY, vizi, nviz, dviz, raiof, valor_0,
-                                              Sy, freq, alfa, beta, A, Ye, CBA, QP, csi,dmax,nos_viz,dts)
+                                              Sy, freq, alfa, beta, A, Ye, CBA, QP, csi,dmax,nos_viz,dts,P,q)
         conta_line += 1
 
         # Se diminuir sai do laço, do contrario diminui o passo

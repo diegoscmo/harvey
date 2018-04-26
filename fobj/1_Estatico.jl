@@ -5,12 +5,15 @@
 #
 # Define o Função Objetivo de Flexibilidade Estática
 #
-function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, tipo::Int64,
-     nnos::Int64, nel::Int64, ijk::Array{Int64,2}, ID::Array{Int64,2}, K0::Array{Float64,2},
-           M0::Array{Float64,2}, SP::Float64, vmin::Float64, F::Array{Float64,1}, NX::Int64,
-              NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2},
-            raiof::Float64, Y0::Array{Float64,1}, Sy::Float64, freq::Float64, alfa::Float64,
-           beta::Float64, A::Float64, Ye::Float64, CBA::Array{Float64,3}, QP::Float64, csi::Float64, dmax::Float64)
+function F_Obj(x, rho::Array{Float64,1}, mult_res::Array{Float64,1}, tipo::Int64, nnos::Int64, nel::Int64,
+               ijk::Array{Int64,2}, coord::Array{Float64,2}, ID::Array{Int64,2}, K0::Array{Float64,2},
+               M0::Array{Float64,2}, SP::Float64, vmin::Float64, F::Array{Float64,1}, NX::Int64,
+               NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2}, raiof::Float64,
+               Y0::Array{Float64,1}, Sy::Float64, freq::Float64, alfa::Float64, beta::Float64, A::Float64,
+               R_bar::Float64, CBA::Array{Float64,3}, QP::Float64, csi::Float64, dmax::Float64, nos_viz, dts)
+
+    # Número de restrições
+    n_rho = 1
 
     # Filtra o x antes de qualquer coisa
     xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
@@ -29,7 +32,8 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
 
     # Retorna valor para primeira iteração
     if tipo == 0
-        return [Est],0.0,0.0,0.0
+        Est = 1.0
+        return [Est],n_rho,0.0,0.0
     end
 
     # Função objetivo normalizada
@@ -37,6 +41,9 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
 
     # Funções de restrição, volume normalizada
     valor_res = [ (mean(xc)-dmax)/(1.0-dmax) ]
+
+    # Lagrangiano aumentado
+    L = valor_fun + 0.5*rho[1]*max(0.0, valor_res[1] + mult_res[1]/rho[1])^2.0
 
     # Se quiser a função obj normalizada
     if tipo == 1
@@ -48,7 +55,6 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
 
     # Função Lagrangiana
     elseif tipo == 2
-        L = valor_fun + 0.5*rho*max(0.0, valor_res[1] + mult_res[1]/rho)^2.0
         return L,0.0,0.0,0.0
 
     # Calculo da derivada
@@ -58,11 +64,11 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
         dL = Array{Float64}(undef,nel)
 
         # Valor para correção da derivada
-        corr_min = 1.0 - vmin
+        corr_min = 1.0 - vmin^SP
 
         # Derivada da restrição de Volume Normalizada (1.0-0.49), 58
         dVdx = 1.0/NX/NY/(1.0-dmax)
-        dL2 = max(0.0, mult_res[1] + rho*valor_res[1])*dVdx
+        dL2 = max(0.0, mult_res[1] + rho[1]*valor_res[1])*dVdx
 
         # Expande o vetor de deslocamentos  (insere zeros)
         USx = Expande_Vetor(US, nnos, ID)
@@ -95,7 +101,7 @@ function F_Obj(x::Array{Float64,1}, rho::Float64, mult_res::Array{Float64,1}, ti
         # Corrige aplicando a derivada do x filtrado em relação ao x original
         dL = dL_Dens(dL, nel, vizi, nviz, dviz, raiof)
 
-        return dL,0.0,0.0,0.0
+        return dL,L,0.0,0.0
 
     end #tipo 3
 

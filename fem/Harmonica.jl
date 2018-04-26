@@ -6,7 +6,7 @@
 # Calcula os <numero_modos> menores modos e frequências naturais da estrutura
 #
 function Analise_Modal(numero_modos,K0,M0,nelems,nnos,ijk,ID,coord,vizi, nviz, dviz, raiof,
-               x,simp=3.0,vmin=1E-3,dts="",i_ext=0)
+               x,simp=3.0,vmin=1E-3,dts="")
 
     # Corrige as densidades
     xf = Filtro_Dens(x, nelems, vizi, nviz, dviz, raiof)
@@ -24,9 +24,7 @@ function Analise_Modal(numero_modos,K0,M0,nelems,nnos,ijk,ID,coord,vizi, nviz, d
 
     # Vamos gravar os modos para um arquivo de visualização no gmsh
     if dts != ""
-        arquivo_saida = string("results\\",dts,"\\",dts,"_modal",i_ext,".pos")
-
-        if isfile(arquivo_saida);  rm(arquivo_saida);  end
+        arquivo_saida = string("results/",dts,"/analise_modal.pos")
 
         Inicializa_Malha_Gmsh(arquivo_saida,nnos,nelems,ijk,coord)
 
@@ -71,7 +69,7 @@ function Analise_Harmonica(freq,K0,M0,nelems,nnos,ijk,ID,coord,vizi, nviz, dviz,
     # Vamos gravar os modos para um arquivo de visualização no gmsh
     if dts != ""
 
-        arquivo_saida = string("results\\",dts,"\\",dts,"_harmonica.pos")
+        arquivo_saida = string("results/",dts,"/analise_harmonica.pos")
 
         if i_ext == 1
 
@@ -92,17 +90,6 @@ function Analise_Harmonica(freq,K0,M0,nelems,nnos,ijk,ID,coord,vizi, nviz, dviz,
 end
 
 
-
-
-
-
-
-
-
-
-
-
-
 #
 # Realiza uma varredura em frequência (Harmônica)
 #
@@ -111,28 +98,35 @@ function Varredura_Graph(dts, fvarredura,
                    ijk::Array{Int64,2},coord::Array{Float64,2},vizi, nviz, dviz, raiof,
                    ID::Array{Int64,2}, K0::Array{Float64,2}, M0::Array{Float64,2},
                    F, alfa::Float64, beta::Float64,
-                   x, simp=3.0, vminimo=1E-3)
+                   x,P,q,nos_viz, simp=3.0, vmin=1E-3)
 
-    # Corrige as densidades
+    # Monta as matrizes globais de massa e de rigidez
     xf = Filtro_Dens(x, nelems, vizi, nviz, dviz, raiof)
     xc = @. vmin+(1.0-vmin)*xf
+    K,M = Global_KM(xc,nelems,ijk,ID,K0,M0,simp,vmin)
 
     # Gera lista de frequências angulares para varredura
     lista_w = 2.0*pi.*collect(fvarredura)
 
-    # Abre o arquivo de saída
-    file  = string("results\\",dts,"\\",dts,"_graph.txt")
+    # Abre os arquivos de saída
+    file  = string("results/",dts,"/varredura_omegas.txt")
     if isfile(file);  rm(file);  end
-    saida = open(file,"w")
+    saida_w = open(file,"w")
 
-    # Monta as matrizes globais de massa e de rigidez
-    K,M = Global_KM(xc,nelems,ijk,ID,K0,M0,simp,vminimo)
+    file  = string("results/",dts,"/varredura_pot_ativa.txt")
+    if isfile(file);  rm(file);  end
+    saida_p = open(file,"w")
 
-    # loop principal...
-    w = lista_w[1]
+    file  = string("results/",dts,"/varredura_razao_r.txt")
+    if isfile(file);  rm(file);  end
+    saida_r = open(file,"w")
+
+    file  = string("results/",dts,"/varredura_norma.txt")
+    if isfile(file);  rm(file);  end
+    saida_n = open(file,"w")
 
     # Loop pela lista de frequências
-    @time for w in lista_w
+    @showprogress "  gerando graficos... " for w in lista_w
 
         # Monta a matriz dinâmica
         KD = sparse(K - (w^2.0)*M + w*im*(alfa*M + beta*K))
@@ -141,141 +135,77 @@ function Varredura_Graph(dts, fvarredura,
         UD = vec(lufact(KD)\F)
 
         # Calcula o valor da Pot At
-        #FD = abs(real(dot(F,UD)))
-        FD = 0.5*w*real(im*dot(F,UD))
+        Pa = 0.5*w*real(im*dot(F,UD))
 
-        # Frequencia em Hz
-        f_Hz = w/(2.0*pi)
-
-        # Grava a resposta no arquivo de monitoramento
-        println(saida,"$f_Hz $FD")
-
-    end # w in lista_w
-
-    close(saida)
-    println(" FRF atualizada ")
-end
-
-function Varredura_R(dts, fvarredura,
-                   nelems::Int64, nnos::Int64,
-                   ijk::Array{Int64,2},coord::Array{Float64,2},vizi, nviz, dviz, raiof,
-                   ID::Array{Int64,2}, K0::Array{Float64,2}, M0::Array{Float64,2},
-                   F, alfa::Float64, beta::Float64,
-                   x, simp=3.0, vminimo=1E-3)
-
-    # Corrige as densidades
-    xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
-    xc = @. vmin+(1.0-vmin)*xf
-
-    # Gera lista de frequências angulares para varredura
-    lista_w = 2.0*pi.*collect(fvarredura)
-
-    # Abre o arquivo de saída
-    file  = string("results\\",dts,"\\",dts,"_R.txt")
-    if isfile(file);  rm(file);  end
-    saida = open(file,"w")
-
-    # Monta as matrizes globais de massa e de rigidez
-    K,M = Global_KM(xc,nelems,ijk,ID,K0,M0,simp,vminimo)
-
-    # loop principal...
-    w = lista_w[1]
-
-    # Loop pela lista de frequências
-    @time for w in lista_w
-
-        # Monta a matriz dinâmica
-        KD = sparse(K - (w^2.0)*M + w*im*(alfa*M + beta*K))
-
-        # Soluciona o sistema... como não é Hermitiana, vamos com LU
-        UD = vec(lufact(KD)\F)
-
-        # Monta pro R
+        # Calcula o valor de r
         Ec = w^2.0*real(adjoint(UD)*M*UD)
         Ep = real(adjoint(UD)*K*UD)
-
         R  = Ec/Ep
 
-        # Frequencia em Hz
-        f_Hz = w/(2.0*pi)
-
-        # Grava a resposta no arquivo de monitoramento
-        println(saida,"$f_Hz $R")
-
-    end # w in lista_w
-
-    close(saida)
-    println(" R atualizado ")
-end
-
-
-#
-# Realiza uma varredura em frequência (Harmônica)
-#
-function Varredura_Phi(dts, fvarredura,
-                   nelems::Int64, nnos::Int64,
-                   ijk::Array{Int64,2},coord::Array{Float64,2},vizi, nviz, dviz, raiof,
-                   ID::Array{Int64,2}, K0::Array{Float64,2}, M0::Array{Float64,2},
-                   F, alfa::Float64, beta::Float64, x, P=12.0,
-                   simp=3.0, vminimo=1E-3)
-
-    # Corrige as densidades
-    xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
-    xc = @. vmin+(1.0-vmin)*xf
-
-    # Gera lista de frequências angulares para varredura
-    lista_w = 2.0*pi.*collect(fvarredura)
-
-    # Abre o arquivo de saída
-    file  = string("results\\",dts,"\\",dts,"_phi_",P,".txt")
-    if isfile(file);  rm(file);  end
-    saida = open(file,"w")
-
-    # Monta as matrizes globais de massa e de rigidez
-    K,M = Global_KM(xc,nelems,ijk,ID,K0,M0,simp,vminimo)
-
-    # loop principal...
-    w = lista_w[1]
-
-    # Loop pela lista de frequências
-    @time for w in lista_w
-
-        # Monta a matriz dinâmica
-        KD = sparse(K - (w^2.0)*M + w*im*(alfa*M + beta*K))
-
-        # Soluciona o sistema... como não é Hermitiana, vamos com LU
-        UD = vec(lufact(KD)\F)
-
-        phi = fzinha(UD,F,P)
+        # Calcula o valor da Norma
+        phi = fzinha_MOD(UD,nnos,nos_viz,xc,ID,P,q)
 
         # Frequencia em Hz
         f_Hz = w/(2.0*pi)
 
         # Grava a resposta no arquivo de monitoramento
-        println(saida,"$f_Hz $phi")
+        println(saida_w,f_Hz)
+        println(saida_p,Pa)
+        println(saida_r,R)
+        println(saida_n,phi)
 
     end # w in lista_w
 
-    close(saida)
-    println(" PHI atualizada ")
+    close(saida_w)
+    close(saida_p)
+    close(saida_r)
+    close(saida_n)
+
 end
 
-function fzinha(UD,F,P)
 
-    phi = 0.0
+function fzinha_MOD(UD,nnos,nos_viz,xc,ID,P,q)
 
-    #norma_F =  sqrt(dot(F,F))
+    # Gera um vetor com as "normas nodais de densidade"
+    aj = zeros(nnos)
+    for j=1:nnos
 
-    #proj_UF = ((dot(UD,F))/norma_F)*F
+        # Recupera os elementos vizinhos deste nó
+        viz = nos_viz[j]
+        vaj = 0.0
+        for v in viz
+            vaj += xc[v]^q
+        end
+        aj[j] = vaj^(1.0/q)
+    end
 
-    for u in UD
+    # Para montar o a_N
+    a_N = 0.0
+    for j=1:nnos
 
-        phi += (conj(u)*u)^(P/2.0)
+       # Recupera aj para este nó
+       vaj = aj[j]
 
-    end #for u
+       # Recupera os gls do nós
+       gl1 = ID[j,1]
+       gl2 = ID[j,2]
 
-    phi = real(phi^(1.0/P))
+       # Primeiro gl
+       if gl1 != 0
+           ui = UD[gl1]
+           a_N += real(conj(ui)*vaj*ui)^(P/2.0)
+       end
+       # Segundo gl
+       if gl2 != 0
+           ui = UD[gl2]
+           a_N += real(conj(ui)*vaj*ui)^(P/2.0)
+       end
 
-    return phi
+    end #if
+
+    # Calcula a norma
+    Nor1 = a_N^(1.0/P)
+
+    return Nor1
 
 end

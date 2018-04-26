@@ -9,20 +9,22 @@ function F_Obj_DFC(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{F
            M0::Array{Float64,2}, SP::Float64, vmin::Float64, F::Array{Float64,1}, NX::Int64,
               NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2},
             raiof::Float64, valor_0::Array{Float64,1}, Sy::Float64, freq::Float64, alfa::Float64,
-           beta::Float64, A::Float64, Ye::Float64, CBA::Array{Float64,3}, QP::Float64, csi::Float64, dmax::Float64, nos_viz,dts)
+           beta::Float64, A::Float64, Ye::Float64, CBA::Array{Float64,3}, QP::Float64, csi::Float64, dmax::Float64, nos_viz,dts,P,q)
 
 
+    # Calcula sensibilidade
     dL_orig, = F_Obj(x, rho, mult_res, 3, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin,
                                  F, NX, NY, vizi, nviz, dviz, raiof, valor_0,
-                                 Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax, nos_viz,dts)
+                                 Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax, nos_viz,dts,P,q)
+
 
     # Step para as diferenças finitas
     #h = 3.0*sqrt(eps())
-    h = 1E-8
+    h = 1E-6
 
-    # Arruma as densidades
+    # Arruma as densidades para calculo do condicionamento
     xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
-    xc = @. vmin+(1.0-vmin)*xf
+    xc = @. vmin + (1.0 - vmin)*xf
 
     # Monta matriz de rigidez e massa global, aqui é aplicado o SIMP
     KG, MG = Global_KM(xc, nel, ijk, ID, K0, M0, SP, vmin)
@@ -32,47 +34,79 @@ function F_Obj_DFC(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{F
     KD = KG + w*im*(alfa*MG + beta*KG) - (w^2.0)*MG
     condor = Checa_Cond(KD,1E-1,1000)
 
-    println(" Calculando derivada por Diferenças Finitas...")
+    # Calcula o L0 caso derive só pra frente ou pra trás
+    L0, = F_Obj(x, rho, mult_res, 2, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin,
+                                      F, NX, NY, vizi, nviz, dviz, raiof, valor_0,
+                      Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax,nos_viz,dts,P,q)
 
     # Declara
     dL = Array{Float64}(undef,nel)
 
     # Gradiente em cada direção
-    for i=1:nel
+    @showprogress "  verificando por dfc..." for i=1:nel
+
         b = x[i]
-        x[i] = b + h
 
+        # Se estiver no limite superior, derivada pra trás
+        if b > (1.0-h)
 
-        L, = F_Obj(x, rho, mult_res, 2, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin,
+            x[i] = b - h
+
+            L, = F_Obj(x, rho, mult_res, 2, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin,
+                                                  F, NX, NY, vizi, nviz, dviz, raiof, valor_0,
+                                                  Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax,nos_viz,dts,P,q)
+
+            dL[i] = (L0 - L)/h
+
+        # Se estive no limite inferior, derivada pra frente
+        elseif b < h
+
+            x[i] = b + h
+
+             L, = F_Obj(x, rho, mult_res, 2, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin,
+                                                F, NX, NY, vizi, nviz, dviz, raiof, valor_0,
+                                            Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax,nos_viz,dts,P,q)
+
+            dL[i] = (L - L0)/h
+
+        # Se no intervalo normal, derivadas centrais
+        else
+
+            x[i] = b + h
+
+            L2, = F_Obj(x, rho, mult_res, 2, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin,
                                               F, NX, NY, vizi, nviz, dviz, raiof, valor_0,
-                                              Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax,nos_viz,dts)
-        #dL[i] = (L - L0)/h
-        x[i] = b - h
+                                              Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax,nos_viz,dts,P,q)
 
-        L0, = F_Obj(x, rho, mult_res, 2, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin,
+            x[i] = b - h
+
+            L1, = F_Obj(x, rho, mult_res, 2, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin,
                                               F, NX, NY, vizi, nviz, dviz, raiof, valor_0,
-                                              Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax,nos_viz,dts)
-        dL[i] = (L - L0)/(2.0*h)
+                                              Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax,nos_viz,dts,P,q)
+            dL[i] = (L2 - L1)/(2.0*h)
+
+        end
 
         x[i] = b
+
     end
 
-    dL = dL_Dens(dL, nel, vizi, nviz, dviz, raiof)
+    # NAO CORRIGE ESSAPORRA
 
     # media da direção da derivada
-    media = sum(dL_orig./dL)/nel
+    media = median(dL_orig./dL)
 
     println()
 
-    file = string("results\\",dts,"\\",dts,"_diffin.txt")
+    file = string("results/",dts,"/derivada_dfc_",h,".txt")
     if isfile(file);  rm(file);  end
     saida = open(file,"a")
     println("Condicionamento de KD = $condor")
     println("Média de Sensibilidade/DFC = $media")
-    println(saida,"Condicionamento de KD = $condor")
     println(saida,"Média de Sensibilidade/DFC = $media")
-    println(saida,"Sensibilidade       Diferenças Finitas Centrais")
-    for z=1:nel;  println(saida,dL_orig[z],"   ",dL[z]) ; end
+    println(saida,"Médiana de Sensibilidade/DFC = $media")
+    println(saida,"Sensibilidade       Diferenças Finitas Centrais  x")
+    for z=1:nel;  println(saida,dL_orig[z],"   ",dL[z],"   ",x[z]) ; end
     close(saida);  error("Diferenças finitas... OK")
 
     return dL,0.0,0.0,0.0
@@ -83,7 +117,7 @@ function F_Obj_DFF(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{F
            M0::Array{Float64,2}, SP::Float64, vmin::Float64, F::Array{Float64,1}, NX::Int64,
               NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2},
             raiof::Float64, valor_0::Array{Float64,1}, Sy::Float64, freq::Float64, alfa::Float64,
-           beta::Float64, A::Float64, Ye::Float64, CBA::Array{Float64,3}, QP::Float64, csi::Float64, dmax::Float64,nos_viz,dts)
+           beta::Float64, A::Float64, Ye::Float64, CBA::Array{Float64,3}, QP::Float64, csi::Float64, dmax::Float64,nos_viz,dts,P,q)
 
     # Step para as diferenças finitas
     #h = 3.0*sqrt(eps())
@@ -91,7 +125,7 @@ function F_Obj_DFF(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{F
 
     L0, = F_Obj(x, rho, mult_res, 2, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin,
                                           F, NX, NY, vizi, nviz, dviz, raiof, valor_0,
-                                          Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax,nos_viz,dts)
+                                          Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax,nos_viz,dts,P,q)
 
     # Declara
     dL = Array{Float64}(undef,nel)
@@ -103,12 +137,10 @@ function F_Obj_DFF(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{F
 
         L, = F_Obj(x, rho, mult_res, 2, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin,
                                               F, NX, NY, vizi, nviz, dviz, raiof, valor_0,
-                                              Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax,nos_viz,dts)
+                                              Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax,nos_viz,dts,P,q)
         dL[i] = (L - L0)/h
         x[i] = b
     end
-
-    dL = dL_Dens(dL, nel, vizi, nviz, dviz, raiof)
 
     return dL,L0,0.0,0.0
 end

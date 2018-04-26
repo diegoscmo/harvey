@@ -10,7 +10,7 @@ function Steepest(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Fl
        NX::Int64, NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2},
              raiof::Float64 ,dts::String, valor_0::Array{Float64,1}, Sy::Float64, freq::Float64,
       alfa::Float64, beta::Float64, A::Float64, Ye::Float64, CBA::Array{Float64,3}, QP::Float64, csi::Float64,
-      dmax::Float64, trava_els::Array{Int64,1},nos_viz,i_ext)
+      dmax::Float64, trava_els::Array{Int64,1},nos_viz,i_ext,P,q)
 
     # Na primeira iteração externa, dobra o número de internas
     if i_ext == 1
@@ -34,12 +34,14 @@ function Steepest(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Fl
     passo0 = 0.10*(nel^0.5)
 
     # Laço interno + cronômetro
-    tmp = @elapsed for i=1:max_int
+    #tmp = @elapsed for i=1:max_int
+    tmp = 0.0
+    @showprogress "  iteracao $i_ext... " for i=1:max_int
 
         # Calcula sensibilidade #F_Obj_DF = diferenças finitas + impressão
         dL,L0, = F_Obj(x, rho, mult_res, 3, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin,
                                      F, NX, NY, vizi, nviz, dviz, raiof, valor_0,
-                                     Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax,nos_viz,dts)
+                                     Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax,nos_viz,dts,P,q)
         contaev += 1
 
         # Bloqueia a direcao
@@ -62,7 +64,7 @@ function Steepest(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Fl
         (alpha, conta_line) = Wall_Search(x, rho, mult_res, dir, tol_int,
                                 minimo, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin, F, NX, NY, vizi,
                                 nviz, dviz, raiof, passo0, L0, valor_0,
-                                Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax, trava_els,nos_viz,dts)
+                                Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax, trava_els,nos_viz,dts,P,q)
         contaev += conta_line
         i_int += 1
 
@@ -73,9 +75,9 @@ function Steepest(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Fl
         passo0 = alpha*2.0
 
         # Mini-exibição a cada 5 iterações
-        if i%5 == 0
-            print(".")
-        end
+        #if i%5 == 0
+        #    print(".")
+        #   end
 
         # Bloqueia o x se passar
         for j=1:nel
@@ -94,9 +96,9 @@ function Steepest(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Fl
         end
 
     end #for i
-    println("")
+    #println("")
     # Da o display do laço interno
-    Imprime_Int(i_int, contaev, norma, dts, tmp)
+    Imprime_Int(i_int, contaev, norma)
 
     return x, dL
 end #function

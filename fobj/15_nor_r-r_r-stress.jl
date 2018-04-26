@@ -10,16 +10,13 @@ function F_Obj(x, rho::Array{Float64,1}, mult_res::Array{Float64,1}, tipo::Int64
            M0::Array{Float64,2}, SP::Float64, vmin::Float64, F::Array{Float64,1}, NX::Int64,
               NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2},
             raiof::Float64, Y0::Array{Float64,1}, Sy::Float64, freq::Float64, alfa::Float64,
-           beta::Float64, A::Float64, Ye::Float64, CBA::Array{Float64,3}, QP::Float64, csi::Float64, dmax::Float64)
-
-    # Número de rhos para penalização
-    n_rho = 3
+           beta::Float64, A::Float64, R_bar::Float64, CBA::Array{Float64,3}, QP::Float64, csi::Float64, dmax::Float64,nos_viz)
 
     # Peso do problema de potência e do estático
     B   = 1.0 - abs(A)
 
     # Restrição do R
-    R_bar = Ye
+    R_bar = R_bar
 
     # Filtra o x antes de qualquer coisa
     xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
@@ -40,25 +37,29 @@ function F_Obj(x, rho::Array{Float64,1}, mult_res::Array{Float64,1}, tipo::Int64
     KSf = cholfact(Symmetric(KG))
     US = vec(KSf\F)
 
-    # Potencia ativa e correção
-    Pa1 = 0.5*w*real(im*dot(F,UD))
-    Pa  = 100.0 + 10.0*log10(Pa1)
+    P = 12.0
+
+    # Norma P
+    a_N = 0.0
+    for u in UD
+         a_N += real((conj(u)*u))^(P/2.0)
+    end
+    Nor1 = a_N^(1.0/P)
+
+    # Corrigida por log
+    Nor = 100.0 + 10.0*log10(Nor1)
 
     # Flexibilidade estática
     FS  = 0.5*dot(F,US)
 
     # Retorna valores zero
     if tipo == 0
-        # Caso A seja negativo, ainda tem que dar 1.0
-        if A < 0.0
-            Pa = -Pa
-        end
-        #ABS
-        return [Pa,FS],n_rho,0.0,0.0
+
+        return [Nor,FS],n_rho,0.0,0.0
     end
 
     # Função objetivo original
-    valor_fun = (A*Pa/Y0[1] + B*FS/Y0[2])
+    valor_fun = (A*Nor/Y0[1] + B*FS/Y0[2])
 
     # Restrição do R
     Ec = w^2.0*real(adjoint(UD)*MG*UD)
@@ -70,12 +71,14 @@ function F_Obj(x, rho::Array{Float64,1}, mult_res::Array{Float64,1}, tipo::Int64
 
     # Funções de restrição, volume, R, stress
     valor_res = Array{Float64}(undef,2+nel*4)
-    valor_res[1] = mean(xc)/dmax - 1.0
+    valor_res[1] = mean(xf)/dmax - 1.0
     valor_res[2] = R_c/R_bar - 1.0
 
     # Calcula tensões
     UDx = Expande_Vetor(UD, nnos, ID)
-    sigma = Tquad4_I_Din(xc, nel, SP, QP, ijk, CBA, UDx, beta, w)
+    #sigma = Tquad4_I_Din(xc, nel, SP, QP, ijk, CBA, UDx, beta, w)
+    sigma = Array{Float64}(undef,nel,12)
+
 
     # Tensor de von-Mises
     M = [ 1.0   -0.5    0.0
@@ -87,38 +90,39 @@ function F_Obj(x, rho::Array{Float64,1}, mult_res::Array{Float64,1}, tipo::Int64
     for j=1:nel
         for k=1:4
             # Localiza o sigma de j,k
-            sigmax = sigma[j,(k*3-2):(k*3)]
+            #sigmax = sigma[j,(k*3-2):(k*3)]
 
             # Calcula o von-mises (forçando real pra não ficar resto)
-            VM[j,k] = sqrt(real(adjoint(sigmax)*M*sigmax))
+            #VM[j,k] = sqrt(real(adjoint(sigmax)*M*sigmax))
 
             # Adiciona restrição no local correto [3:end]
             loc = j*4+k-4
-            valor_res[loc+2] = VM[j,k]/Sy - 1.0
+            valor_res[loc+2] =  0.0#VM[j,k]/Sy - 1.0
         end #k
     end #j
+
+
+        # Calcula o Lagrangiano aumentado
+        L = valor_fun + 0.5*rho[1]*max(0.0, valor_res[1] + mult_res[1]/rho[1])^2.0# +
+        #                0.5*rho[2]*max(0.0, valor_res[2] + mult_res[2]/rho[2])^2.0
+        #for j=n_rho:size(valor_res,1)
+        #    L += 0.5*rho[n_rho]*max(0.0, valor_res[j] + mult_res[j]/rho[n_rho])^2.0
+        #end
+
 
     # Se quiser só a F_Obj, retorna
     if tipo == 1
         maxS = maximum(VM)/Sy
 
-        nmodos = 6
+        nmodos = 10
         freqs = Analise_Modal(nmodos,K0,M0,nel,nnos,ijk,ID,coord,xc,SP)
 
         @show(R)
         @show(maxS)
-        return valor_fun, valor_res, [valor_fun;Pa/Y0[1];FS/Y0[2];mean(xf);R;maxS;freqs], sigma
-    end
+        return valor_fun, valor_res, [L;Nor1;FS;mean(xf);R;maxS;freqs], sigma
 
-    # Calcula o Lagrangiano aumentado
-    L = valor_fun + 0.5*rho[1]*max(0.0, valor_res[1] + mult_res[1]/rho[1])^2.0 +
-                    0.5*rho[2]*max(0.0, valor_res[2] + mult_res[2]/rho[2])^2.0
-    for j=n_rho:size(valor_res,1)
-        L += 0.5*rho[n_rho]*max(0.0, valor_res[j] + mult_res[j]/rho[n_rho])^2.0
-    end
-
-    # Função Lagrangiana
-    if tipo == 2
+        # Função Lagrangiana
+    elseif tipo == 2
 
         return L,0.0,0.0,0.0
 
@@ -144,6 +148,20 @@ function F_Obj(x, rho::Array{Float64,1}, mult_res::Array{Float64,1}, tipo::Int64
         end
 
         ### Resolvendo os adjuntos ###
+
+        # Começando pela norma
+        ngdl = size(UD,1)
+
+        a_N = a_N^((1.0/P)-1.0)
+        aux_N = zeros(Complex,ngdl)
+        ngdl = 0
+        for u in UD
+             ngdl += 1
+             aux_N[ngdl] = a_N*(-(real(conj(u)*u)^((P/2.0)-1.0))*conj(u))
+        end
+
+        # Resolve o adjunto da norma
+        adj_N = vec(KDf\aux_N)
 
         # Termos em comum no assembly do adjunto da tensão
         PQ2 = 2.0*(SP-QP)
@@ -193,6 +211,7 @@ function F_Obj(x, rho::Array{Float64,1}, mult_res::Array{Float64,1}, tipo::Int64
         # Expande os vetores de deslocamentos  (insere zeros). UDx já foi
         adj_Sx = Expande_Vetor(adj_S, nnos, ID)
         adj_Rx = Expande_Vetor(adj_R, nnos, ID)
+        adj_Nx = Expande_Vetor(adj_N, nnos, ID)
         USx    = Expande_Vetor(US, nnos, ID)
 
         # Varre os elementos
@@ -206,6 +225,7 @@ function F_Obj(x, rho::Array{Float64,1}, mult_res::Array{Float64,1}, tipo::Int64
             UDe    = Array{ComplexF64}(undef,8)
             adj_Se = Array{ComplexF64}(undef,8)
             adj_Re = Array{ComplexF64}(undef,8)
+            adj_Ne = Array{ComplexF64}(undef,8)
             for k = 1:4
                 nok        = nos_ele[k]
                 USe[2*k-1] = USx[2*nok-1]
@@ -216,6 +236,8 @@ function F_Obj(x, rho::Array{Float64,1}, mult_res::Array{Float64,1}, tipo::Int64
                 adj_Se[2*k]   = adj_Sx[2*nok]
                 adj_Re[2*k-1] = adj_Rx[2*nok-1]
                 adj_Re[2*k]   = adj_Rx[2*nok]
+                adj_Ne[2*k-1] = adj_Nx[2*nok-1]
+                adj_Ne[2*k]   = adj_Nx[2*nok]
             end # for k
 
             # derivada das matrizes de rigidez e massa 109, corrigida
@@ -230,9 +252,9 @@ function F_Obj(x, rho::Array{Float64,1}, mult_res::Array{Float64,1}, tipo::Int64
             # Derivada da matriz dinamica
             dKDedx = dKedx*(1.0+im*w*beta) + dMedx*(-w^2.0+im*w*alfa)
 
-            # Derivada da Potencia Ativa e correção log
-            dPdx1 = -0.5*w*real(im*transpose(UDe)*dKDedx*UDe)
-            dPdx = (10.0/(log(10.0)*Pa1))*dPdx1/Y0[1]
+            # Derivada da Norma
+            dNdx1 = real(transpose(adj_Ne)*dKDedx*UDe)
+            dNdx = (10.0/(log(10.0)*Nor1))*dNdx1/Y0[1]
 
             # Derivada da flexibilidade estática e correção
             dYdx = -0.5*transpose(USe)*dKedx*USe/Y0[2]
@@ -253,7 +275,7 @@ function F_Obj(x, rho::Array{Float64,1}, mult_res::Array{Float64,1}, tipo::Int64
             end #for k
 
             # Derivada do LA
-            dL[j] = A*dPdx + B*dYdx + dVdx + dRdx  + dSdx
+            dL[j] = A*dNdx + B*dYdx + dVdx# + dRdx  + dSdx
 
         end #for j
 
