@@ -9,3 +9,5 @@ include("monta_global.jl")     # Global, Expande_Vetor
 include("gmsh.jl")             # Funções GMSH
 include("harmonica.jl")        # Cálculo Harmônico
 include("condicionamento.jl")
+
+include("conector.jl")

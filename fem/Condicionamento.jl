@@ -18,12 +18,15 @@ function Cond_H(t,tol)
 end
 
 #
-# Checa o condicionamento de uma matriz qualquer
+# Checa o condicionamento de uma matriz A qualquer
 #
-function Checa_Cond(A,tol::Float64,imax)
+function Checa_Cond(A,tol::Float64,imax::Int64)
 
-    maior = Pot_Maior(A,tol,imax)
-    menor = Pot_Menor(A,tol,imax)
+    #maior = Pot_Maior(A,tol,imax)
+    #menor = Pot_Menor(A,tol,imax)
+
+    maior = eigs(A,which=:LM)[1][1]
+    menor = eigs(A,which=:SM)[1][1]
     cond = abs(maior)/abs(menor)
 
     return cond
@@ -62,8 +65,9 @@ function Pot_Maior(A,tol,imax)
         x = copy(xk)/norm(xk)
         lambda = copy(lambda_k)
 
+        # Incrementa iteração e verifica saída
         iter += 1
-        if iter>imax
+        if iter > imax
             break
         end
 
@@ -107,8 +111,9 @@ function Pot_Menor(A,tol,imax)
         x = copy(xk)/norm(xk)
         lambda = copy(lambda_k)
 
+        # Incrementa iteração e verifica saída
         iter += 1
-        if iter>imax
+        if iter > imax
             break
         end
 

@@ -91,7 +91,7 @@ function F_Obj_DFC(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{F
 
     end
 
-    # NAO CORRIGE ESSAPORRA
+    # NAO CORRIGE O FILTRO!!
 
     # media da direção da derivada
     media = median(dL_orig./dL)
@@ -103,11 +103,11 @@ function F_Obj_DFC(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{F
     saida = open(file,"a")
     println("Condicionamento de KD = $condor")
     println("Média de Sensibilidade/DFC = $media")
+    println(saida,"Condicionamento de KD = $condor")
     println(saida,"Média de Sensibilidade/DFC = $media")
-    println(saida,"Médiana de Sensibilidade/DFC = $media")
     println(saida,"Sensibilidade       Diferenças Finitas Centrais  x")
-    for z=1:nel;  println(saida,dL_orig[z],"   ",dL[z],"   ",x[z]) ; end
-    close(saida);  error("Diferenças finitas... OK")
+    for z=1:nel;  println(saida,dL_orig[z],"\t\t",dL[z],"\t\t",x[z]) ; end
+    close(saida);
 
     return dL,0.0,0.0,0.0
 end

@@ -5,12 +5,13 @@
 #
 # Define o Função Objetivo de Potência + Flexibilidade Estática, restrição no R
 #
-function F_Obj(x, rho::Array{Float64,1}, mult_res::Array{Float64,1}, tipo::Int64, nnos::Int64, nel::Int64,
+function F_Obj(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Float64,1}, tipo::Int64, nnos::Int64, nel::Int64,
                ijk::Array{Int64,2}, coord::Array{Float64,2}, ID::Array{Int64,2}, K0::Array{Float64,2},
                M0::Array{Float64,2}, SP::Float64, vmin::Float64, F::Array{Float64,1}, NX::Int64,
                NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2}, raiof::Float64,
                Y0::Array{Float64,1}, Sy::Float64, freq::Float64, alfa::Float64, beta::Float64, A::Float64,
-               R_bar::Float64, CBA::Array{Float64,3}, QP::Float64, csi::Float64, dmax::Float64, nos_viz, dts,P,q)
+               R_bar::Float64, CBA::Array{Float64,3}, QP::Float64, csi::Float64, dmax::Float64, nos_viz,
+               dts::String, P::Float64, q::Float64)
 
     # Peso do problema de potência e do estático
     B   = 1.0 - abs(A)
@@ -38,6 +39,7 @@ function F_Obj(x, rho::Array{Float64,1}, mult_res::Array{Float64,1}, tipo::Int64
     aj = zeros(nnos)
     for j=1:nnos
 
+
         # Recupera os elementos vizinhos deste nó
         viz = nos_viz[j]
         vaj = 0.0
@@ -49,6 +51,7 @@ function F_Obj(x, rho::Array{Float64,1}, mult_res::Array{Float64,1}, tipo::Int64
 
         # Tira a norma q
         aj[j] = vaj^(1.0/q)
+
      end
 
      # Para montar o a_N

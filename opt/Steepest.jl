@@ -10,7 +10,7 @@ function Steepest(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Fl
        NX::Int64, NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2},
              raiof::Float64 ,dts::String, valor_0::Array{Float64,1}, Sy::Float64, freq::Float64,
       alfa::Float64, beta::Float64, A::Float64, Ye::Float64, CBA::Array{Float64,3}, QP::Float64, csi::Float64,
-      dmax::Float64, trava_els::Array{Int64,1},nos_viz,i_ext,P,q)
+      dmax::Float64, trava_els::Array{Int64,1},nos_viz,i_ext::Int64,P::Float64,q::Float64)
 
     # Na primeira iteração externa, dobra o número de internas
     if i_ext == 1
@@ -34,8 +34,6 @@ function Steepest(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Fl
     passo0 = 0.10*(nel^0.5)
 
     # Laço interno + cronômetro
-    #tmp = @elapsed for i=1:max_int
-    tmp = 0.0
     @showprogress "  iteracao $i_ext... " for i=1:max_int
 
         # Calcula sensibilidade #F_Obj_DF = diferenças finitas + impressão
@@ -74,11 +72,6 @@ function Steepest(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Fl
         # Define o passo máximo da próxima iteração
         passo0 = alpha*2.0
 
-        # Mini-exibição a cada 5 iterações
-        #if i%5 == 0
-        #    print(".")
-        #   end
-
         # Bloqueia o x se passar
         for j=1:nel
             x[j] = min(1.0,max(x[j],0.0))
@@ -96,7 +89,7 @@ function Steepest(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Fl
         end
 
     end #for i
-    #println("")
+
     # Da o display do laço interno
     Imprime_Int(i_int, contaev, norma)
 

@@ -11,16 +11,13 @@ function F_Obj(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Float
                NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2}, raiof::Float64,
                Y0::Array{Float64,1}, Sy::Float64, freq::Float64, alfa::Float64, beta::Float64, A::Float64,
                R_bar::Float64, CBA::Array{Float64,3}, QP::Float64, csi::Float64, dmax::Float64, nos_viz,
-                dts::String,P::Float64,q::Float64)
-
-    # Número de rhos para penalização
-    n_rho = 3
+               dts::String, P::Float64, q::Float64)
 
     # Peso do problema de potência e do estático
     B   = 1.0 - abs(A)
 
-    # Filtra o x antes de qualquer coisa
-    xf = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
+    # Filtra o x antes de qualquer coisa, já com heaviside se csi > 0.0
+    xf, xfc = Filtro_Dens(x, nel, csi, vizi, nviz, dviz, raiof)
 
     # Corrige x com vmin
     xc = @. vmin + (1.0 - vmin)*xf
@@ -53,6 +50,7 @@ function F_Obj(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Float
 
         # Tira a norma q
         aj[j] = vaj^(1.0/q)
+
      end
 
      # Para montar o a_N
@@ -90,7 +88,7 @@ function F_Obj(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Float
 
     # Retorna valores zero
     if tipo == 0
-        return [Nor,FS],0.0,0.0,0.0
+        return [Nor,FS], 3, 0.0,0.0
     end
 
     # Função objetivo original
@@ -137,8 +135,8 @@ function F_Obj(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Float
         maxS = maximum(VM)/Sy
 
         # Faz a análise modal e passa os valores para o display externo
-        freqs = Analise_Modal(10,K0,M0,nel,nnos,ijk,ID,coord,vizi, nviz, dviz, raiof,x,SP,vmin,dts)
-        Analise_Harmonica(freq,K0,M0,nel,nnos,ijk,ID,coord,vizi,nviz,dviz,raiof,alfa,beta,F,x,SP,vmin,dts,1)
+        freqs = Analise_Modal(10,K0,M0,nel,csi,nnos,ijk,ID,coord,vizi, nviz, dviz, raiof,x,SP,vmin,dts)
+        Analise_Harmonica(freq,K0,M0,nel,csi,nnos,ijk,ID,coord,vizi,nviz,dviz,raiof,alfa,beta,F,x,SP,vmin,dts,1)
 
         return valor_fun, valor_res, [L;Nor1;FS;mean(xf);R;maxS;freqs], sigma
 
@@ -285,8 +283,8 @@ function F_Obj(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Float
 
         end #for j
 
-        # Corrige aplicando a derivada do x filtrado em relação ao x original 65
-        dL = dL_Dens(dL, nel, vizi, nviz, dviz, raiof)
+        # Corrige a derivada, com ou sem Heaviside
+        dL = dL_Dens(dL, xfc, csi, nel, vizi, nviz, dviz, raiof)
 
         return dL,L,0.0,0.0
 

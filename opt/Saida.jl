@@ -1,4 +1,4 @@
-################################################################################
+10################################################################################
 #####                Saída de Arquivos + Display no Console               ######
 ################################################################################
 
@@ -12,12 +12,12 @@ function Imprime_Int(i_int::Int64, contaev::Int64, norma::Float64)
 end
 
 function Imprime_Ext(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Float64,1},
-                     valor_fun::Float64, valor_res::Array{Float64,1}, i_ext::Int64,
+                     valor_fun::Float64, valor_res::Array{Float64,1}, i_ext::Int64, csi::Float64,
                      dts::String, nel::Int64, to_plot::Array{Float64,1}, TS::Array{Float64,2},
                      vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2}, raiof::Float64)
 
     # Recalcula o volume
-    xf =  Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
+    xf, =  Filtro_Dens(x, nel, csi, vizi, nviz, dviz, raiof)
     vol = mean(xf)
 
     # Displau dos valores atuais
@@ -64,6 +64,9 @@ function Imprime_Ext(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array
         # Imprime o número da iteração
         println(saida3,i_ext)
 
+        # Valor do CSI para Heaviside
+        println(saida3,csi)
+
         # Imprime os valores de rho
         for j=1:size(rho,1)
             println(saida3,rho[j])
@@ -109,11 +112,11 @@ function Imprime_0(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{F
     Inicializa_Malha_Gmsh(fmesh3, nnos, nel, ijk, coord, 2)
 
     # Dá o print do console
-    println("\n  LagAug:: ",dts)
-    println("\n  Nelems:: ",nel," | Iter:: ", max_ext,"/", max_int)
+    printstyled("\n  LagAug:: ",dts,"\n",color=:10)
+    printstyled("\n  Nelems:: ",nel," | Iter:: ", max_ext,"/", max_int,"\n",color=:10)
 
     # Vai pra função que imprime a externa
-    Imprime_Ext(x, rho, mult_res, valor_fun, valor_res, 0, dts, nel,
+    Imprime_Ext(x, rho, mult_res, valor_fun, valor_res, 0, 0.0, dts, nel,
                                     to_plot, TS, vizi, nviz, dviz, raiof)
 
 end
@@ -195,21 +198,23 @@ function Le_Ultima(dts, nel::Int64, n_rho::Int64)
     # Número da próxima iteração
    i_ext = parse(Int64,texto[1])+1
 
+   csi   = parse(Float64,texto[2])
+
    # Número de restrições (tudo menos rhos e i_ext)
-   nrest = size(texto,1)-n_rho-1
+   nrest = size(texto,1)-n_rho-2
 
    # Inicializa
    rho  = Array{Float64,1}(undef,n_rho)
    mult_res = Array{Float64,1}(undef,nrest)
 
    # Captura valores de rho
-   for j=2:(n_rho+1)
-       rho[j-1]   = parse(Float64,texto[j])
+   for j=3:(n_rho+2)
+       rho[j-2]   = parse(Float64,texto[j])
    end
 
    # Captura valores dos multplicadores
-   for j=(n_rho+2):size(texto,1)
-       mult_res[j-n_rho-1] = parse(Float64,texto[j])
+   for j=(n_rho+3):size(texto,1)
+       mult_res[j-n_rho-2] = parse(Float64,texto[j])
    end
 
    # Arquivo com as densidades_originais
@@ -218,7 +223,7 @@ function Le_Ultima(dts, nel::Int64, n_rho::Int64)
    # Lê arquivo com densidades x
    x = Le_Densidades(arq_dens, nel)
 
-   return x, i_ext, rho, mult_res
+   return x, i_ext, rho, mult_res, csi
 
 end
 
@@ -241,14 +246,14 @@ function Load_Game(dts, nel, max_ext, max_int)
         # Se estive Vai ficar perguntando até receber Y ou N
         while true
 
-            @printf("Utilizar execução anterior? Y/N")
+            printstyled("\nUtilizar execução anterior? Y/N",bold=true,color=:yellow)
             conf = input()
             if conf == "Y" || conf ==  "y"
 
                 # Imprime aviso
-                println("AVISO: Carregando execução anterior, cuidado com as condições de contorno!")
-                println("\n  LagAug:: ",dts)
-                println("\n  Nelems:: ",nel," | Iter:: ", max_ext,"/", max_int)
+                printstyled("AVISO: Carregando execução anterior, cuidado com as condições de contorno!\n",color=:yellow)
+                printstyled("\n  LagAug:: ",dts,"\n",color=:10)
+                printstyled("\n  Nelems:: ",nel," | Iter:: ", max_ext,"/", max_int,"\n",color=:10)
                 return true
 
             elseif conf == "N" || conf =="n"

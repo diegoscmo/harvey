@@ -152,11 +152,14 @@ function Proc_Vizinhos_Nos(ijk, nnos, nelems)
 #
 # Aplica filtro de densidades, pág 65
 #
-function Filtro_Dens(xi::Array{Float64,1},nel::Int64,vizi::Array{Int64,2},
+function Filtro_Dens(xi::Array{Float64,1},nel::Int64,csi::Float64,vizi::Array{Int64,2},
     nviz::Array{Int64,1},dviz::Array{Float64,2},raiof::Float64)
 
-    # Inicializa vetor de saída (ñ pode ser undef)
-    xo = zeros(Float64,nel)
+    # Inicializa vetores de saída (ñ pode ser undef)
+    xf = zeros(Float64,nel)
+
+    # Heaviside também
+    xh = zeros(Float64,nel)
 
     # Varre os elementos
     for ele = 1:nel
@@ -180,16 +183,22 @@ function Filtro_Dens(xi::Array{Float64,1},nel::Int64,vizi::Array{Int64,2},
         end #viz
 
         # Filtra elemento
-        xo[ele] = dividen/divisor
+        xfe     = dividen/divisor
+        xf[ele] = xfe
+
+        # Aplica Heaviside
+        xh[ele] = 1.0 - exp(-csi*xfe)  + xfe*exp(-csi)
 
     end #ele
 
-    return xo
+    return xh,xf
 end
+
 #
-# Corrige derivada devido ao filtro de densidades (cadeia)
+# Corrige derivada devido ao filtro de densidades e Heaviside (cadeia)
 #
-function dL_Dens(dL::Array{Float64,1},nel::Int64,vizi::Array{Int64,2},
+
+function dL_Dens(dL::Array{Float64,1},xf::Array{Float64,1},csi::Float64,nel::Int64,vizi::Array{Int64,2},
     nviz::Array{Int64,1},dviz::Array{Float64,2},raiof::Float64)
 
     # Inicializa o vetor das derivadas corrigidas (ñ pode ser undef)
@@ -216,8 +225,14 @@ function dL_Dens(dL::Array{Float64,1},nel::Int64,vizi::Array{Int64,2},
                 soma += 1.0 - dviz[k,j]/raiof
             end #j
 
+            # Acha o x filtrado do vizinho
+            xfik  = xf[k]
+
+            # Calcula o termo referente ao heaviside
+            heavi = csi*exp(-csi*xfik) + exp(-csi)
+
             # Acumula a correção de derivada
-            dLo[m] += dL[k]*(Hmk/soma)
+            dLo[m] += dL[k]*(Hmk/soma)*heavi
 
         end #k
 
@@ -228,7 +243,12 @@ end
 
 
 
-function Filtro_Heavi(x::Array{Float64,1},nel::Int64,csi)
+##################### NÃO IMPLEMENTADO AINDA! #################################
+
+#
+#   Não implementado ainda!
+#
+function Filtro_Heavi_Tan(x::Array{Float64,1},nel::Int64,csi)
 
     # Inicializa o x filtrado
 
@@ -291,17 +311,7 @@ function Filtro_Heavi(x::Array{Float64,1},nel::Int64,csi)
     return xh,eta
 end
 
-#
-# Corrige derivada devido ao filtro heaviside (cadeia)
-#
-function dL_Heavi(xf::Array{Float64,1},dL::Array{Float64,1},csi::Float64,eta::Float64,nel::Int64)
-
-
-
-    return dLH
-end
-
-function dL_Heavi(dL::Array{Float64,1},nel::Int64,vizi::Array{Int64,2},
+function dL_Heavi_Tan(dL::Array{Float64,1},nel::Int64,vizi::Array{Int64,2},
     nviz::Array{Int64,1},dviz::Array{Float64,2},raiof::Float64,xf::Array{Float64,1},csi::Float64,eta::Float64)
 
     # Inicializa o vetor das derivadas corrigidas

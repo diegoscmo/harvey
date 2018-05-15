@@ -8,6 +8,8 @@ include("wall_search.jl")      # Procura em linha, Wall_Search
 include("filtros.jl")          # Filtros de densidades e sensibilidades
 include("saida.jl")            # Impressão das saídas em arquivo e console
 include("dif_fin.jl")          # Diferenças finitas, caso precise fazer validação
+include("struct.jl")           # Estrutura para receber e repassar as constantes
+include("steepest_nag.jl")
 
 #
 # Rotina principal, recebe parâmetros e executa a otimização topológica com LA
@@ -17,7 +19,7 @@ function Top_Opt(dts::AbstractString, Sy::Float64, freq::Float64, alfa::Float64,
                  rho::Array{Float64,1}, rho_max::Float64, SP::Float64, raiof::Float64,
                  vmin::Float64, NX::Int64, NY::Int64, LX::Float64, LY::Float64, young::Float64, poisson::Float64,
                  esp::Float64, p_dens::Float64, presos::Array{Float64,2}, forcas::Array{Float64,2},
-                 travas::Array{Float64,2}, QP::Float64, csi::Float64, dmax::Float64, P, q)
+                 travas::Array{Float64,2}, QP::Float64, csistep::Float64, dmax::Float64, P, q,heavi)
 
     # Cálcula número de nós e elementos
     nnos = (NX+1)*(NY+1)
@@ -52,6 +54,7 @@ function Top_Opt(dts::AbstractString, Sy::Float64, freq::Float64, alfa::Float64,
     end
 
     # Adquire valores iniciais se aplicável
+    csi = 0.0
     valor_0, smu = F_Obj(x, [1.0], [0.0], 0, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin, F,
                               NX, NY, vizi, nviz, dviz, raiof, [1.0], Sy, freq, alfa, beta, A,
                                                       R_bar, CBA, QP, csi, dmax, nos_viz, dts,P,q)
@@ -76,7 +79,7 @@ function Top_Opt(dts::AbstractString, Sy::Float64, freq::Float64, alfa::Float64,
     if load_flag == true
 
         # Carrega tudo
-        x, itex, rho, mu_res = Le_Ultima(dts, nel, n_rho)
+        x, itex, rho, mu_res, csi = Le_Ultima(dts, nel, n_rho)
 
     else
         # Faz primeira impressão
@@ -89,9 +92,20 @@ function Top_Opt(dts::AbstractString, Sy::Float64, freq::Float64, alfa::Float64,
                                young, poisson, esp, p_dens, presos, forcas, QP, csi, dmax,P,q)
     end
 
-
     # Inicia o laço externo do lagrangiano aumentado
-    for i_ext=itex:max_ext
+    for i_ext=itex:(max_ext+heavi)
+
+        if i_ext != 1
+            # Atualiza o valor o multiplicador das restricoes (u) e penalização (c)
+            mu_res = Atualiza_Lag(rho, v_res, mu_res)
+
+            # Se ativa o heaviside aumenta csi, se não, atualiza rhos
+            if i_ext >= max_ext
+                csi = min(csi+csistep, 200.0)
+            else
+                rho, crit_rho = Atualiza_Rho(rho, crit_rho, rho_max, v_res, mu_res)
+            end
+        end
 
         # Soluciona o problema interno e salva a derivada
         x, dL = Steepest(x, rho, mu_res, max_int, tol_int, nnos, nel, ijk, coord, ID, K0, M0,
@@ -103,37 +117,46 @@ function Top_Opt(dts::AbstractString, Sy::Float64, freq::Float64, alfa::Float64,
                                           F, NX, NY, vizi, nviz, dviz, raiof, valor_0, Sy, freq, alfa,
                                           beta, A, R_bar, CBA, QP, csi, dmax, nos_viz, dts,P,q)
 
-        # Atualiza o valor o multiplicador das restricoes (u) e penalização (c)
-        rho, crit_rho, mu_res = Atualiza_Rho(rho, crit_rho, rho_max, v_res, mu_res)
-
         # Mini-exibição a cada 5 iterações
         if i_ext%5 == 0
-            println("\n  LagAug:: ",dts)
+            printstyled("\n  LagAug:: ",dts,"\n",color=:10)
         end
 
         # Imprime resultado atual e plota saida para o gmsh
-        Imprime_Ext(x, rho, mu_res, v_fun, v_res, i_ext, dts, nel,
+        Imprime_Ext(x, rho, mu_res, v_fun, v_res, i_ext, csi, dts, nel,
                     [i_ext;norm(dL);stat], real(sigma), vizi, nviz, dviz, raiof)
 
         # Verifica os criterios de parada:
         if  norm(dL)               <= tol_ext &&  # Condicao de gradiente
             norm(max.(v_res, 0.0)) <= tol_ext &&  # Condicao de viabilidade
             norm(v_res'*mu_res)    <  tol_ext     # Cond. de complementariedade
-            break
+                break
         end # if criterios
 
     end # for i_ext
 
     # Agora que acabou a otimização, fazemos barba, cabelo e bigode
-    fvarredura = 0.0:2.0:1500.0
+    fvarredura = 00.0:2.00:1000.0
+
+    #xf = Filtro_Dens(x, nel, csi, vizi, nviz, dviz, raiof)
+    #xc = @. vmin+(1.0-vmin)*xf
+
+    #fmesh = string("results/",dts,"/densidades_conec_fil.pos")
+    #Inicializa_Malha_Gmsh(fmesh, nnos, nel, ijk, coord, 2)
+    #Adiciona_Vista_Escalar_Gmsh(fmesh, "x", nel, xc, 0.0)
+
+    #plota_con(xc,nnos,ijk,coord,nel,dts,NX,NY)
 
     # Modal, Potência Ativa, Norma P, R....
-    Varredura_Graph(dts, fvarredura, nel, nnos, ijk, coord,vizi, nviz, dviz, raiof,ID, K0, M0, F, alfa, beta, x, P, q, nos_viz, SP, vmin)
+    Varredura_Graph(dts, fvarredura, nel, csi, nnos, ijk, coord,vizi, nviz, dviz, raiof,ID, K0, M0, F, alfa, beta, x, P, q, nos_viz, SP, vmin)
 
-    # Diferenças finitas, só pra se sobrar tempo...
-    #F_Obj_DFC(x, rho, mu_res, 3, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin, F,
-    #                NX, NY, vizi, nviz, dviz, raiof, valor_0, Sy, freq, alfa, beta, A,
-    #                                            R_bar, CBA, QP, csi, dmax,nos_viz,dts,P,q)
+    #Varredura_dL(fvarredura,x, rho, mu_res, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin,
+    #                         F, NX, NY, vizi, nviz, dviz, raiof, valor_0,
+    #                         Sy, freq, alfa, beta, A, R_bar, CBA, QP, csi, dmax,nos_viz,dts,P,q)
+
+    #Varredura_dL_ele(2450,fvarredura, x, rho, mu_res, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin,
+    #                         F, NX, NY, vizi, nviz, dviz, raiof, valor_0,
+    #                         Sy, freq, alfa, beta, A, R_bar, CBA, QP, csi, dmax,nos_viz,dts,P,q)
 
 end
 
@@ -141,9 +164,6 @@ end
 # Atualiza rhos, se flag==true, faz só a inicialização
 #
 function Atualiza_Rho(rho, crit_old, rho_max, v_res, mu_res, flag=false)
-
-    # Copia o critério antigo
-    crit_rho = copy(crit_old)
 
     # Inicializa
     n_rho    = size(rho,1)
@@ -173,13 +193,22 @@ function Atualiza_Rho(rho, crit_old, rho_max, v_res, mu_res, flag=false)
 
     end
 
-    # Atualiza também os multiplicadores das restrições
-    for j=1:(n_rho-1)
-        mu_res[j] = max.(rho[j]*v_res[j] + mu_res[j], 0.0)
-    end #for j
-
-    # Do mesmo modo, o últimos multiplicadores são diferentes...
-    mu_res[n_rho:end] = max.(norm(rho[n_rho]*v_res[n_rho:end] + mu_res[n_rho:end]), 0.0)
     return rho, crit_rho, mu_res
 
+end
+
+#
+# Atualiza rhos, se flag==true, faz só a inicialização
+#
+function Atualiza_Lag(rho, v_res, mu_res)
+
+    # Atualiza os multiplicadores das restrições
+    for j=1:2
+        mu_res[j] = max.(rho[j]*v_res[j] + mu_res[j], 0.0)
+    end #for j
+    for j=3:size(mu_res,1)
+        mu_res[j] = max.(rho[3]*v_res[j] + mu_res[j], 0.0)
+    end #for j
+
+    return mu_res
 end
