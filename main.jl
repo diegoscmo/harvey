@@ -2,8 +2,11 @@
 ###           Lagrangiano Aumentado // Otimização Topológica                 ###
 ################################################################################
 
- using Printf; using SparseArrays; using LinearAlgebra; using IterativeEigensolvers; using ProgressMeter
-# include("main.jl"); main();
+ using Printf
+ using SparseArrays
+ using LinearAlgebra
+ using IterativeEigensolvers
+ using ProgressMeter
 
 # Carrega rotinas
 include("fem/rotinas_fem.jl")      # Rotinas de Elementos Finitos
@@ -31,14 +34,14 @@ include("fobj/11_norma_global.jl")
 function main()
 
     # Nome do Arquivo
-    dts = "MIN_180_W_A099_P22_VI05_1800_Heavi"
+    dts = "MIN_180_W_A099_P22_VI05_HT9_5000"
 
     # Parâmetros da Função Objetivo
     freq        = 180.0     # Frequência de excitação
     alfa        = 0.0       # Amortecimento Proporcional - Massa
     #beta        = 1E-8     # Amortecimento Proporcional - Rigidez
     beta        = 0.1/(2.0*pi*freq)
-    A           = 0.99      # Peso da primeira Fobj (negativo para resonant)
+    A           = 0.8      # Peso da primeira Fobj (negativo para resonant)
     P           = 2.0       # Parâmetros da Norma
     q           = 2.0       #
     R_b         = .999      # Porcentagem da restrição (Est ou R)
@@ -47,8 +50,8 @@ function main()
     dmax        = 0.50      # Restrição de volume  F=1 #0.41345415 600@1E-8b
 
     # Parâmetros do Lagrangiano Aumentado
-    max_ext     = 20        # Máximo de iteracoes externas
-    heavi       = 40        # Número de iterações com Heaviside
+    max_ext     = 30        # Máximo de iteracoes externas
+    heavi       = 60        # Número de iterações com Heaviside
     max_int     = 500       # Máximo de iterações internas
     tol_ext     = 1E-6      # Tolerância do laço externo
     tol_int     = 1E-6      # Tolerância do laço interno
@@ -67,8 +70,8 @@ function main()
     csistep     = 5.0       # Passo do parametro Heaviside
 
     # Parâmetros do problema de FEM, 60x30 = 1800 // 70x35 = 2450 // 80x40 = 3200
-    NX          = 60       # Nr. de elementos em X
-    NY          = 30        # Nr. de elementos em Y
+    NX          = 100       # Nr. de elementos em X
+    NY          = 50        # Nr. de elementos em Y
     LX          = 1.0       # Comprimento em X
     LY          = 0.5       # Comprimento em Y
     young       = 210E9     # Módulo de Young

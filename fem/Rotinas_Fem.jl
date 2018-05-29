@@ -4,10 +4,9 @@
 
 # Carrega os arquivos com as rotinas de elementos finitos
 include("gera_malha.jl")       # GeraMalha, gl_livres_elemento
-include("quad4.jl")          # Kquad4_I
+include("quad4.jl")            # Kquad4_I
 include("monta_global.jl")     # Global, Expande_Vetor
 include("gmsh.jl")             # Funções GMSH
 include("harmonica.jl")        # Cálculo Harmônico
-include("condicionamento.jl")
-
-include("conector.jl")
+include("condic.jl")           # Rotina para verificar o condicionamento de matrizes
+include("conector.jl")         # Algumas funções de mapeamento

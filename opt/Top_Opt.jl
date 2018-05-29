@@ -8,8 +8,6 @@ include("wall_search.jl")      # Procura em linha, Wall_Search
 include("filtros.jl")          # Filtros de densidades e sensibilidades
 include("saida.jl")            # Impressão das saídas em arquivo e console
 include("dif_fin.jl")          # Diferenças finitas, caso precise fazer validação
-include("struct.jl")           # Estrutura para receber e repassar as constantes
-include("steepest_nag.jl")
 
 #
 # Rotina principal, recebe parâmetros e executa a otimização topológica com LA
@@ -98,14 +96,17 @@ function Top_Opt(dts::AbstractString, Sy::Float64, freq::Float64, alfa::Float64,
         if i_ext != 1
             # Atualiza o valor o multiplicador das restricoes (u) e penalização (c)
             mu_res = Atualiza_Lag(rho, v_res, mu_res)
+            rho, crit_rho = Atualiza_Rho(rho, crit_rho, rho_max, v_res, mu_res)
 
             # Se ativa o heaviside aumenta csi, se não, atualiza rhos
-            if i_ext >= max_ext
-                csi = min(csi+csistep, 200.0)
-            else
+            if i_ext > max_ext
+                csi = max(min(csi*1.25, 200.0),0.5)
+                #csi = max(csi+5.0,200.0)
                 rho, crit_rho = Atualiza_Rho(rho, crit_rho, rho_max, v_res, mu_res)
             end
         end
+
+
 
         # Soluciona o problema interno e salva a derivada
         x, dL = Steepest(x, rho, mu_res, max_int, tol_int, nnos, nel, ijk, coord, ID, K0, M0,
