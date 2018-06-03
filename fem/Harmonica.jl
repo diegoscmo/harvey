@@ -5,15 +5,15 @@
 #
 # Calcula os <numero_modos> menores modos e frequências naturais da estrutura
 #
-function Analise_Modal(numero_modos,K0,M0,nelems, csi, nnos,ijk,ID,coord,vizi, nviz, dviz, raiof,
+function Analise_Modal(numero_modos,K0,M0,nel, csi, nnos,ijk,ID,coord,vizi, nviz, dviz, raiof,
                x,simp=3.0,vmin=1E-3,dts="")
 
     # Corrige as densidades
-    xf, = Filtro_Dens(x, nelems, csi, vizi, nviz, dviz, raiof)
+    xf, = Filtro_Dens(x, nel, csi, vizi, nviz, dviz, raiof)
     xc = @. vmin+(1.0-vmin)*xf
 
     # Monta as matrizes globais de massa e de rigidez
-    K,M = Global_KM(xc,nelems,ijk,ID,K0,M0,simp,vmin)
+    K,M = Global_KM(xc,nel,ijk,ID,K0,M0,simp,vmin)
 
     # Utilizamos o ARPACK
     AVL = IterativeEigensolvers.eigs(K,M,nev=numero_modos,which=:SM,ritzvec=true)
@@ -24,9 +24,13 @@ function Analise_Modal(numero_modos,K0,M0,nelems, csi, nnos,ijk,ID,coord,vizi, n
 
     # Vamos gravar os modos para um arquivo de visualização no gmsh
     if dts != ""
-        arquivo_saida = string("results/",dts,"/analise_modal.pos")
+        if csi == 0.0
+            arquivo_saida = string("results/",dts,"/f_modalans.pos")
+        else
+            arquivo_saida = string("results/",dts,"/h_modalans.pos")
+        end
 
-        Inicializa_Malha_Gmsh(arquivo_saida,nnos,nelems,ijk,coord)
+        Inicializa_Malha_Gmsh(arquivo_saida,nnos,nel,ijk,coord)
 
         # Para cada modo, convertemos para FULL e geramos a visualização
         for modo=1:numero_modos
@@ -44,19 +48,48 @@ function Analise_Modal(numero_modos,K0,M0,nelems, csi, nnos,ijk,ID,coord,vizi, n
 
 end
 
+#
+# Calcula os <numero_modos> menores modos e frequências naturais da
+# Pra rodar externo!
+#
+function Harmonica(dts,freq,x,csi,nnos,nel,coord,ijk,ID,vizi,nviz,dviz,raiof,alfa,beta,F,K0,M0,vmin,simp=3.0)
+
+    # Corrige as densidades
+    xf, = Filtro_Dens(x, nel, csi, vizi, nviz, dviz, raiof)
+    xc = @. vmin+(1.0-vmin)*xf
+
+    # Monta as matrizes globais de massa e de rigidez
+    K,M = Global_KM(xc,nel,ijk,ID,K0,M0,simp,vmin)
+
+    w = 2.0*pi*freq
+
+    # Monta a matriz dinâmica
+    KD = sparse(K - (w^2.0)*M + w*im*(alfa*M + beta*K))
+
+    # Soluciona o sistema... como não é Hermitiana, vamos com LU
+    UD = vec(lufact(KD)\F)
+
+   # Expande o modo
+   desloc = real(Expande_Vetor(UD, nnos, ID))
+
+   return desloc
+
+end
+
+
 
 #
 # Calcula os <numero_modos> menores modos e frequências naturais da estrutura
 #
-function Analise_Harmonica(freq,K0,M0,nelems, csi, nnos,ijk,ID,coord,vizi, nviz, dviz, raiof, alfa,beta,F,
+function Analise_Harmonica(freq,K0,M0,nel, csi, nnos,ijk,ID,coord,vizi, nviz, dviz, raiof, alfa,beta,F,
                x,simp=3.0,vmin=1E-3,dts="",i_ext=1)
 
     # Corrige as densidades
-    xf, = Filtro_Dens(x, nelems, csi, vizi, nviz, dviz, raiof)
+    xf, = Filtro_Dens(x, nel, csi, vizi, nviz, dviz, raiof)
     xc = @. vmin+(1.0-vmin)*xf
 
     # Monta as matrizes globais de massa e de rigidez
-    K,M = Global_KM(xc,nelems,ijk,ID,K0,M0,simp,vmin)
+    K,M = Global_KM(xc,nel,ijk,ID,K0,M0,simp,vmin)
 
     w = 2.0*pi*freq
 
@@ -69,15 +102,11 @@ function Analise_Harmonica(freq,K0,M0,nelems, csi, nnos,ijk,ID,coord,vizi, nviz,
     # Vamos gravar os modos para um arquivo de visualização no gmsh
     if dts != ""
 
-        arquivo_saida = string("results/",dts,"/analise_harmonica.pos")
-
-        if i_ext == 1
-
-            if isfile(arquivo_saida);  rm(arquivo_saida);  end
-            Inicializa_Malha_Gmsh(arquivo_saida,nnos,nelems,ijk,coord)
-
-        end
-
+       if csi == 0.0
+           arquivo_saida = string("results/",dts,"/f_topology.pos")
+       else
+           arquivo_saida = string("results/",dts,"/h_topology.pos")
+       end
        # Expande o modo
        desloc = real(Expande_Vetor(UD, nnos, ID))
 
@@ -163,41 +192,41 @@ end
 # Realiza uma varredura em frequência (Harmônica)
 #
 function Varredura_Graph(dts, fvarredura,
-                   nelems::Int64, csi, nnos::Int64,
+                   nel::Int64, csi, nnos::Int64,
                    ijk::Array{Int64,2},coord::Array{Float64,2},vizi, nviz, dviz, raiof,
                    ID::Array{Int64,2}, K0::Array{Float64,2}, M0::Array{Float64,2},
                    F, alfa::Float64, beta::Float64,
-                   x,P,q,nos_viz, simp=3.0, vmin=1E-3)
+                   x,P,q,nos_viz, heavi, simp=3.0, vmin=1E-3)
 
     # Monta as matrizes globais de massa e de rigidez
-    xf, = Filtro_Dens(x, nelems, csi, vizi, nviz, dviz, raiof)
+    xf, = Filtro_Dens(x, nel, csi, vizi, nviz, dviz, raiof)
     xc = @. vmin+(1.0-vmin)*xf
-    K,M = Global_KM(xc,nelems,ijk,ID,K0,M0,simp,vmin)
+    K,M = Global_KM(xc,nel,ijk,ID,K0,M0,simp,vmin)
     C   = (alfa*M + beta*K)
 
     # Gera lista de frequências angulares para varredura
     lista_w = 2.0*pi.*collect(fvarredura)
 
+    # Diferencia heaviside de filtro
+    if !heavi
+        pfix = "f"
+    else
+        pfix = "h"
+    end
+
     # Abre os arquivos de saída
-    file  = string("results/",dts,"/varredura_omegas.txt")
+    file  = string("results/",dts,"/",pfix,"_zomegas.txt")
     if isfile(file);  rm(file);  end
     saida_w = open(file,"w")
 
-    file  = string("results/",dts,"/varredura_pot_ativa.txt")
+    file  = string("results/",dts,"/",pfix,"_zpotenat.txt")
     if isfile(file);  rm(file);  end
     saida_p = open(file,"w")
 
-    file  = string("results/",dts,"/varredura_razao_r.txt")
-    if isfile(file);  rm(file);  end
-    saida_r = open(file,"w")
-
-    file  = string("results/",dts,"/varredura_norma.txt")
+    file  = string("results/",dts,"/",pfix,"_znormas.txt")
     if isfile(file);  rm(file);  end
     saida_n = open(file,"w")
 
-    file  = string("results/",dts,"/varredura_condic.txt")
-    if isfile(file);  rm(file);  end
-    saida_c = open(file,"w")
 
     # Loop pela lista de frequências
     @showprogress "  gerando graficos... " for w in lista_w
@@ -209,15 +238,15 @@ function Varredura_Graph(dts, fvarredura,
         UD = vec(lufact(KD)\F)
 
         # Verifica o condicionamento na frequência
-        cond = Checa_Cond(KD,1E-4,1000)
+    #    cond = Checa_Cond(KD,1E-4,1000)
 
         # Calcula o valor da Pot At
         Pa = 0.5*w*real(im*dot(F,UD))
 
         # Calcula o valor de r
-        Ec = w^2.0*real(adjoint(UD)*M*UD)
-        Ep = real(adjoint(UD)*K*UD)
-        R  = Ec/Ep
+    #    Ec = w^2.0*real(adjoint(UD)*M*UD)
+    #    Ep = real(adjoint(UD)*K*UD)
+    #    R  = Ec/Ep
 
         # Calcula o valor da Norma
         phi = fzinha_MOD(UD,nnos,nos_viz,xc,ID,P,q)
@@ -228,17 +257,17 @@ function Varredura_Graph(dts, fvarredura,
         # Grava a resposta no arquivo de monitoramento
         println(saida_w,f_Hz)
         println(saida_p,Pa)
-        println(saida_r,R)
+    #    println(saida_r,R)
         println(saida_n,phi)
-        println(saida_c,cond)
+    #    println(saida_c,cond)
 
     end # w in lista_w
 
     close(saida_w)
     close(saida_p)
-    close(saida_r)
+    #close(saida_r)
     close(saida_n)
-    close(saida_c)
+    #close(saida_c)
 end
 
 
@@ -290,16 +319,16 @@ end
 
 
 function Varredura_Cond(dts, fvarredura,
-                   nelems::Int64,csi, nnos::Int64,
+                   nel::Int64,csi, nnos::Int64,
                    ijk::Array{Int64,2},coord::Array{Float64,2},vizi, nviz, dviz, raiof,
                    ID::Array{Int64,2}, K0::Array{Float64,2}, M0::Array{Float64,2},
                    F, alfa::Float64, beta::Float64,
                    x, tol,miter,simp=3.0, vmin=1E-3)
 
    # Monta as matrizes globais de massa e de rigidez
-   xf, = Filtro_Dens(x, nelems, vizi, nviz, dviz, raiof)
+   xf, = Filtro_Dens(x, nel, vizi, nviz, dviz, raiof)
    xc = @. vmin+(1.0-vmin)*xf
-   K,M = Global_KM(xc,nelems,ijk,ID,K0,M0,simp,vmin)
+   K,M = Global_KM(xc,nel,ijk,ID,K0,M0,simp,vmin)
 
    # Gera lista de frequências angulares para varredura
    lista_w = 2.0*pi.*collect(fvarredura)

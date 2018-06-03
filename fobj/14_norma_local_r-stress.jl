@@ -5,7 +5,7 @@
 #
 # Define o Função Objetivo de Potência + Flexibilidade Estática, restrição no R
 #
-function F_Obj(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Float64,1}, tipo::Int64, nnos::Int64, nel::Int64,
+function F_Obj4(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Float64,1}, tipo::Int64, nnos::Int64, nel::Int64,
                ijk::Array{Int64,2}, coord::Array{Float64,2}, ID::Array{Int64,2}, K0::Array{Float64,2},
                M0::Array{Float64,2}, SP::Float64, vmin::Float64, F::Array{Float64,1}, NX::Int64,
                NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2}, raiof::Float64,
@@ -157,10 +157,10 @@ function F_Obj(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Float
         maxS = maximum(VM)/Sy
 
         # Faz a análise modal e passa os valores para o display externo
-        freqs = Analise_Modal(10,K0,M0,nel,nnos,ijk,ID,coord,vizi, nviz, dviz, raiof,x,SP,vmin,dts)
-        Analise_Harmonica(freq,K0,M0,nel,nnos,ijk,ID,coord,vizi,nviz,dviz,raiof,alfa,beta,F,x,SP,vmin,dts,1)
+        freqs = Analise_Modal(10,K0,M0,nel,csi,nnos,ijk,ID,coord,vizi, nviz, dviz, raiof,x,SP,vmin,dts)
+        harm = Harmonica(dts,freq,x,csi,nnos,nel,coord,ijk,ID,vizi,nviz,dviz,raiof,alfa,beta,F,K0,M0,vmin)
 
-        return valor_fun, valor_res, [L;Nor1;FS;mean(xf);R;maxS;freqs], sigma
+        return valor_fun, valor_res, [L;Nor1;FS;mean(xf);R;maxS;freqs], sigma, harm
 
         # Função Lagrangiana
     elseif tipo == 2

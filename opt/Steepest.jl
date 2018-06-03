@@ -4,13 +4,14 @@
 #
 # Método de busca baseado no gradiente
 #
-function Steepest(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Float64,1}, max_int::Int64,
-             tol_int::Float64, nnos::Int64, nel::Int64, ijk::Array{Int64,2}, coord::Array{Float64,2}, ID::Array{Int64,2},
-    K0::Array{Float64,2}, M0::Array{Float64,2}, SP::Float64, vmin::Float64, F::Array{Float64,1},
-       NX::Int64, NY::Int64, vizi::Array{Int64,2}, nviz::Array{Int64,1}, dviz::Array{Float64,2},
-             raiof::Float64 ,dts::String, valor_0::Array{Float64,1}, Sy::Float64, freq::Float64,
-      alfa::Float64, beta::Float64, A::Float64, Ye::Float64, CBA::Array{Float64,3}, QP::Float64, csi::Float64,
-      dmax::Float64, trava_els::Array{Int64,1},nos_viz,i_ext::Int64,P::Float64,q::Float64)
+function Steepest(T::Int64, x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Float64,1},
+                max_int::Int64, tol_int::Float64, nnos::Int64, nel::Int64, ijk::Array{Int64,2},
+                coord::Array{Float64,2}, ID::Array{Int64,2}, K0::Array{Float64,2}, M0::Array{Float64,2},
+                SP::Float64, vmin::Float64, F::Array{Float64,1}, NX::Int64, NY::Int64, vizi::Array{Int64,2},
+                nviz::Array{Int64,1}, dviz::Array{Float64,2}, raiof::Float64 ,dts::String,
+                valor_0::Array{Float64,1}, Sy::Float64, freq::Float64, alfa::Float64, beta::Float64,
+                A::Float64, Ye::Float64, CBA::Array{Float64,3}, QP::Float64, csi::Float64, dmax::Float64,
+                trava_els::Array{Int64,1}, nos_viz, i_ext::Int64, P::Float64, q::Float64, F_Obj)
 
     # Na primeira iteração externa, dobra o número de internas
     if i_ext == 1
@@ -37,7 +38,7 @@ function Steepest(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Fl
     @showprogress "  iteracao $i_ext... " for i=1:max_int
 
         # Calcula sensibilidade #F_Obj_DF = diferenças finitas + impressão
-        dL,L0, = F_Obj(x, rho, mult_res, 3, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin,
+        dL,L0, = F_Obj[T](x, rho, mult_res, 3, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin,
                                      F, NX, NY, vizi, nviz, dviz, raiof, valor_0,
                                      Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax,nos_viz,dts,P,q)
         contaev += 1
@@ -59,10 +60,10 @@ function Steepest(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Fl
         end
 
         # Search na direção do Steepest
-        (alpha, conta_line) = Wall_Search(x, rho, mult_res, dir, tol_int,
-                                minimo, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin, F, NX, NY, vizi,
-                                nviz, dviz, raiof, passo0, L0, valor_0,
-                                Sy, freq, alfa, beta, A, Ye, CBA, QP, csi, dmax, trava_els,nos_viz,dts,P,q)
+        (alpha, conta_line) = Wall_Search(T, x, rho, mult_res, dir, tol_int, minimo, nnos, nel,
+                                ijk, coord, ID, K0, M0, SP, vmin, F, NX, NY, vizi, nviz, dviz,
+                                raiof, passo0, L0, valor_0, Sy, freq, alfa, beta, A, Ye, CBA,
+                                QP, csi, dmax, trava_els, nos_viz, dts, P, q, F_Obj)
         contaev += conta_line
         i_int += 1
 

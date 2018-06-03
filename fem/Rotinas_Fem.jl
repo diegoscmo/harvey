@@ -8,5 +8,4 @@ include("quad4.jl")            # Kquad4_I
 include("monta_global.jl")     # Global, Expande_Vetor
 include("gmsh.jl")             # Funções GMSH
 include("harmonica.jl")        # Cálculo Harmônico
-include("condic.jl")           # Rotina para verificar o condicionamento de matrizes
 include("conector.jl")         # Algumas funções de mapeamento

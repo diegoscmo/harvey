@@ -12,12 +12,31 @@ include("dif_fin.jl")          # Diferenças finitas, caso precise fazer valida�
 #
 # Rotina principal, recebe parâmetros e executa a otimização topológica com LA
 #
-function Top_Opt(dts::AbstractString, Sy::Float64, freq::Float64, alfa::Float64, beta::Float64, R_bar::Float64,
-                 A::Float64, dini::Float64, max_ext::Int64, max_int::Int64, tol_ext::Float64, tol_int::Float64,
+function Top_Opt(T::Int64, dts::AbstractString, Sy::Float64, freq::Float64, alfa::Float64, beta, R_bar::Float64,
+                 A::Float64, dini::Float64, max_fil::Int64, max_int::Int64, tol_ext::Float64, tol_int::Float64,
                  rho::Array{Float64,1}, rho_max::Float64, SP::Float64, raiof::Float64,
                  vmin::Float64, NX::Int64, NY::Int64, LX::Float64, LY::Float64, young::Float64, poisson::Float64,
                  esp::Float64, p_dens::Float64, presos::Array{Float64,2}, forcas::Array{Float64,2},
-                 travas::Array{Float64,2}, QP::Float64, csistep::Float64, dmax::Float64, P, q,heavi)
+                 travas::Array{Float64,2}, QP::Float64, csi0::Float64, csim::Float64, dmax::Float64,
+                 P::Float64, q::Float64, max_hev::Int64)
+
+    # Aqui checa a trava, se nao tiver coloca, se tiver da return com um aviso
+    state = Lock_Game(dts)
+
+    if state != 0
+        println("   travado/completo - ",dts)
+        return
+    end
+
+    # Verifica se existe save file e escolhe o tipo de analise
+    loadf, heavi, max_ext = Check_Game(dts, max_fil, max_hev)
+
+    @printf("\n Inicializando...\n\tFinitos....")
+
+    # Converte o beta proporcional para seu real valor
+    if beta == "W"
+        beta = 0.1/(2.0*freq)
+    end
 
     # Cálcula número de nós e elementos
     nnos = (NX+1)*(NY+1)
@@ -33,6 +52,8 @@ function Top_Opt(dts::AbstractString, Sy::Float64, freq::Float64, alfa::Float64,
     K0, CBA = Kquad4_I(1, coord, ijk, young, poisson, esp)
     M0 = Mquad4(1, coord, ijk, esp, p_dens)
 
+    @printf("......OK\n\tVizinhos....")
+
     # Prepara os vizinhos para filtros
     vizi, nviz, dviz = Proc_Vizinhos(nel, coord, ijk, raiof)
 
@@ -46,86 +67,73 @@ function Top_Opt(dts::AbstractString, Sy::Float64, freq::Float64, alfa::Float64,
     x = dini*ones(nel)
     x = Trava_Els(x, trava_els)
 
-    # Abre diretório pras saídas
-    if isdir(string("results/",dts)) == false
-        mkdir(string("results/",dts))
-    end
+    @printf(".....OK\n\tValor Zero...")
 
-    # Adquire valores iniciais se aplicável
+    # Aproveitando pra agrupar as fobjs
+    F_Obj = Function[]
+    push!(F_Obj,F_Obj1)
+    push!(F_Obj,F_Obj2)
+    push!(F_Obj,F_Obj3)
+    push!(F_Obj,F_Obj4)
+
+    # Adquire valor zero o numero de restricoes
     csi = 0.0
-    valor_0, smu = F_Obj(x, [1.0], [0.0], 0, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin, F,
+    valor_0, smu = F_Obj[T](x, [1.0], [0.0], 0, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin, F,
                               NX, NY, vizi, nviz, dviz, raiof, [1.0], Sy, freq, alfa, beta, A,
                                                       R_bar, CBA, QP, csi, dmax, nos_viz, dts,P,q)
 
     # Inicializa multiplicadores de penalização
     mu_res  = zeros(smu)
     n_rho   = size(rho,1)
-    itex    = 1
+    itex    = 0
+
+    #  Se tiver algum save para carregar
+    if loadf
+        x, itex, rho, mu_res, csi = Load_Game(dts, heavi)
+    end
+
+    # No caso do filtro completo, para começar o heaviside
+    if !loadf && heavi
+        x, itex, rho, mu_res, csi = Load_Game(dts, false)
+        itex = 0
+        csi  =csi0
+    end
+
+    @printf("....OK\n\tDisplay inicial.")
 
     # Inicializa vetores e calcula para primeiro display
-    v_fun, v_res, stat, sigma = F_Obj(x, rho, mu_res, 1, nnos, nel, ijk, coord, ID, K0, M0,
-                                   SP, vmin, F, NX, NY, vizi, nviz, dviz, raiof, valor_0, Sy,
-                                  freq, alfa, beta, A, R_bar, CBA, QP, csi, dmax,nos_viz,dts,P,q)
+    v_fun,v_res,stat,sigma,harm = F_Obj[T](x, rho, mu_res, 1, nnos, nel, ijk, coord, ID, K0, M0,
+                                   SP, vmin, F, NX, NY, vizi, nviz, dviz, raiof, valor_0, Sy, freq,
+                                   alfa, beta, A, R_bar, CBA, QP, csi, dmax, nos_viz, dts, P, q)
 
     # Calcula o criterio de atualizacao do c, começando pelos individuais
     crit_rho = Atualiza_Rho(rho, zeros(n_rho), rho_max, v_res, mu_res, true)
 
-    # Verifica se tem save_file
-    load_flag = Load_Game(dts, nel, max_ext, max_int)
+    @printf(".OK\n")
 
-    #  Se tiver, ou continua ou faz o primeiro display pra começar do zero
-    if load_flag == true
-
-        # Carrega tudo
-        x, itex, rho, mu_res, csi = Le_Ultima(dts, nel, n_rho)
-
-    else
-        # Faz primeira impressão
-        Imprime_0(x, rho, mu_res, v_fun, v_res, max_ext, max_int, tol_ext, tol_int, dts,
-                   nnos, nel, ijk, coord, [0.0;0.0;stat], real(sigma), vizi, nviz, dviz, raiof)
-
-        # Registra as variaveis em um arquivo
-        Imprime_Caso(dts, Sy, freq, alfa, beta, R_bar, A, dini, max_ext, max_int, tol_ext,
-                         tol_int, rho, rho_max, SP, raiof, vmin, NX, NY, LX, LY,
-                               young, poisson, esp, p_dens, presos, forcas, QP, csi, dmax,P,q)
+    # Primeiro display, if para caso tenha acado o heaviside e ficou sem .done.
+    if itex < max_ext
+        Imprime_Ext(x, rho, mu_res, v_fun, v_res, itex, csi, dts, nel,
+                    [0.0;0.0;stat], real(sigma), harm, vizi, nviz, dviz, raiof, heavi,nnos,ijk,coord,loadf)
     end
+    itex += 1
 
     # Inicia o laço externo do lagrangiano aumentado
-    for i_ext=itex:(max_ext+heavi)
-
-        if i_ext != 1
-            # Atualiza o valor o multiplicador das restricoes (u) e penalização (c)
-            mu_res = Atualiza_Lag(rho, v_res, mu_res)
-            rho, crit_rho = Atualiza_Rho(rho, crit_rho, rho_max, v_res, mu_res)
-
-            # Se ativa o heaviside aumenta csi, se não, atualiza rhos
-            if i_ext > max_ext
-                csi = max(min(csi*1.25, 200.0),0.5)
-                #csi = max(csi+5.0,200.0)
-                rho, crit_rho = Atualiza_Rho(rho, crit_rho, rho_max, v_res, mu_res)
-            end
-        end
-
-
+    for i_ext=itex:max_ext
 
         # Soluciona o problema interno e salva a derivada
-        x, dL = Steepest(x, rho, mu_res, max_int, tol_int, nnos, nel, ijk, coord, ID, K0, M0,
+        x, dL = Steepest(T, x, rho, mu_res, max_int, tol_int, nnos, nel, ijk, coord, ID, K0, M0,
                          SP, vmin, F, NX, NY, vizi, nviz, dviz, raiof, dts, valor_0, Sy, freq,
-                         alfa, beta, A, R_bar, CBA, QP, csi, dmax, trava_els, nos_viz, i_ext,P,q)
+                         alfa, beta, A, R_bar, CBA, QP, csi, dmax, trava_els, nos_viz, i_ext,P,q,F_Obj)
 
         # Verifica novos valores da função e restrições
-        v_fun,v_res,stat,sigma = F_Obj(x, rho, mu_res, 1, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin,
+        v_fun,v_res,stat,sigma,harm = F_Obj[T](x, rho, mu_res, 1, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin,
                                           F, NX, NY, vizi, nviz, dviz, raiof, valor_0, Sy, freq, alfa,
                                           beta, A, R_bar, CBA, QP, csi, dmax, nos_viz, dts,P,q)
 
-        # Mini-exibição a cada 5 iterações
-        if i_ext%5 == 0
-            printstyled("\n  LagAug:: ",dts,"\n",color=:10)
-        end
-
         # Imprime resultado atual e plota saida para o gmsh
         Imprime_Ext(x, rho, mu_res, v_fun, v_res, i_ext, csi, dts, nel,
-                    [i_ext;norm(dL);stat], real(sigma), vizi, nviz, dviz, raiof)
+                    [i_ext;norm(dL);stat], real(sigma), harm, vizi, nviz, dviz, raiof, heavi,nnos,ijk,coord)
 
         # Verifica os criterios de parada:
         if  norm(dL)               <= tol_ext &&  # Condicao de gradiente
@@ -134,30 +142,27 @@ function Top_Opt(dts::AbstractString, Sy::Float64, freq::Float64, alfa::Float64,
                 break
         end # if criterios
 
+        # Atualiza a penalizacao para proxima iteracao
+        rho, crit_rho = Atualiza_Rho(rho, crit_rho, rho_max, v_res, mu_res)
+
+        # Ou atualiza multiplicadores de rest (filtro) ou atualiza csi (heaviside)
+        if !heavi
+            mu_res = Atualiza_Lag(rho, v_res, mu_res)
+        else
+            csi = min(csi*csim, 200.0)
+        end
+
     end # for i_ext
 
     # Agora que acabou a otimização, fazemos barba, cabelo e bigode
-    fvarredura = 00.0:2.00:1000.0
-
-    #xf = Filtro_Dens(x, nel, csi, vizi, nviz, dviz, raiof)
-    #xc = @. vmin+(1.0-vmin)*xf
-
-    #fmesh = string("results/",dts,"/densidades_conec_fil.pos")
-    #Inicializa_Malha_Gmsh(fmesh, nnos, nel, ijk, coord, 2)
-    #Adiciona_Vista_Escalar_Gmsh(fmesh, "x", nel, xc, 0.0)
-
-    #plota_con(xc,nnos,ijk,coord,nel,dts,NX,NY)
+    fvarredura = 0.0:2.00:1000.0
 
     # Modal, Potência Ativa, Norma P, R....
-    Varredura_Graph(dts, fvarredura, nel, csi, nnos, ijk, coord,vizi, nviz, dviz, raiof,ID, K0, M0, F, alfa, beta, x, P, q, nos_viz, SP, vmin)
+    Varredura_Graph(dts, fvarredura, nel, csi, nnos, ijk, coord,vizi, nviz, dviz,
+                    raiof,ID, K0, M0, F, alfa, beta, x, P, q, nos_viz, heavi, SP, vmin)
 
-    #Varredura_dL(fvarredura,x, rho, mu_res, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin,
-    #                         F, NX, NY, vizi, nviz, dviz, raiof, valor_0,
-    #                         Sy, freq, alfa, beta, A, R_bar, CBA, QP, csi, dmax,nos_viz,dts,P,q)
-
-    #Varredura_dL_ele(2450,fvarredura, x, rho, mu_res, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin,
-    #                         F, NX, NY, vizi, nviz, dviz, raiof, valor_0,
-    #                         Sy, freq, alfa, beta, A, R_bar, CBA, QP, csi, dmax,nos_viz,dts,P,q)
+    # Deixa um arquivo para indicar que acabou (no caso do heavi)
+    End_Game(dts,heavi)
 
 end
 

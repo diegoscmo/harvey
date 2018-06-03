@@ -22,18 +22,6 @@ function F_Obj_DFC(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{F
     #h = 3.0*sqrt(eps())
     h = 1E-6
 
-    # Arruma as densidades para calculo do condicionamento
-    #xf = Filtro_Dens(x, nel, csi, vizi, nviz, dviz, raiof)
-    #xc = @. vmin + (1.0 - vmin)*xf
-
-    # Monta matriz de rigidez e massa global, aqui é aplicado o SIMP
-    #KG, MG = Global_KM(xc, nel, ijk, ID, K0, M0, SP, vmin)
-
-    # Checa o condicionamento
-    #w  = 2.0*pi*freq
-    #KD = KG + w*im*(alfa*MG + beta*KG) - (w^2.0)*MG
-    #condor = Checa_Cond(KD,1E-1,1000)
-
     # Calcula o L0 caso derive só pra frente ou pra trás
     L0, = F_Obj(x, rho, mult_res, 2, nnos, nel, ijk, coord, ID, K0, M0, SP, vmin,
                                       F, NX, NY, vizi, nviz, dviz, raiof, valor_0,
@@ -101,9 +89,7 @@ function F_Obj_DFC(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{F
     file = string("results/",dts,"/derivada_dfc_",h,".txt")
     if isfile(file);  rm(file);  end
     saida = open(file,"a")
-    #println("Condicionamento de KD = $condor")
     println("Média de Sensibilidade/DFC = $media")
-    #println(saida,"Condicionamento de KD = $condor")
     println(saida,"Média de Sensibilidade/DFC = $media")
     println(saida,"Sensibilidade       Diferenças Finitas Centrais  x")
     for z=1:nel;  println(saida,dL_orig[z],"\t\t",dL[z],"\t\t",x[z]) ; end
