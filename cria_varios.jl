@@ -23,11 +23,14 @@ function Cria_Varios()
     P           = [2.0]       # Parâmetros da Norma
     q           = [2.0]       #
     Sy          = [4E20]      # Tensão limite
-    dini        = [0.50]      # Volume inicial R=1 #0.52631277505 600@0.1w 0.532239322199 @ 600@1E-8b
+    dini        = [0.50; 1.00]      # Volume inicial R=1 #0.52631277505 600@0.1w 0.532239322199 @ 600@1E-8b
     dmax        = [0.50]      # Restrição de volume  F=1 #0.41345415 600@1E-8b
     QP          = [1.50]      # Relaxação da tensão
-    csi0        = [0.1 ; 1.0 ; 5.0]       # Primeiro valor do Heaviside
-    csim        = [1.1 ; 1.2 ; 1.3; 1.4]      # Multiplicador do heaviside
+    csi0        = [1.0; 5.0; 10.0]       # Primeiro valor do Heaviside
+    csim        = [1.2 ; 1.3; 1.4; 1.5]      # Multiplicador do heaviside
+
+    # Se nao quiser criar casos heaviside, deixe false!
+    heavi = true
 
     V = collect(product(tipoan,freq,beta,A,P,q,Sy,dini,dmax,QP,csi0,csim))
 
@@ -52,9 +55,10 @@ function Cria_Varios()
     for i=1:size(V,1)
 
         dts = Name_Game(V[i][1],V[i][2],alfa,V[i][3],V[i][4],V[i][5],V[i][6],V[i][7],V[i][8],
-                           V[i][9],V[i][10],V[i][11],V[i][12], rho1,rho2,rho3,raiof,max_fil,
-                                                    max_hev,max_int,tol_ext,tol_int,rho_max)
+                            V[i][9],V[i][10],V[i][11],V[i][12], rho1,rho2,rho3,raiof,max_fil,
+                                               max_hev,max_int,tol_ext,tol_int,rho_max,heavi)
 
+        sleep(0.1)
     end
 
     println("  ",size(V,1)," casos criados!")

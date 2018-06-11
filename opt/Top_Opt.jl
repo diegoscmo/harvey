@@ -12,13 +12,16 @@ include("dif_fin.jl")          # Diferenças finitas, caso precise fazer valida�
 #
 # Rotina principal, recebe parâmetros e executa a otimização topológica com LA
 #
-function Top_Opt(T::Int64, dts::AbstractString, Sy::Float64, freq::Float64, alfa::Float64, beta, R_bar::Float64,
-                 A::Float64, dini::Float64, max_fil::Int64, max_int::Int64, tol_ext::Float64, tol_int::Float64,
+function Top_Opt(T::Int64, dts0::AbstractString, sub::AbstractString, Sy::Float64, freq::Float64, alfa::Float64, beta, R_bar::Float64,
+                 A::Float64, dini::Float64, max_ext::Int64, max_int::Int64, tol_ext::Float64, tol_int::Float64,
                  rho::Array{Float64,1}, rho_max::Float64, SP::Float64, raiof::Float64,
                  vmin::Float64, NX::Int64, NY::Int64, LX::Float64, LY::Float64, young::Float64, poisson::Float64,
                  esp::Float64, p_dens::Float64, presos::Array{Float64,2}, forcas::Array{Float64,2},
                  travas::Array{Float64,2}, QP::Float64, csi0::Float64, csim::Float64, dmax::Float64,
-                 P::Float64, q::Float64, max_hev::Int64)
+                 P::Float64, q::Float64, heavi::Bool)
+
+    # Verifica se existe save file pra carregar e arruma o dts se necessario
+    loadf, dts = Check_Game(dts0, sub, max_ext, heavi)
 
     # Aqui checa a trava, se nao tiver coloca, se tiver da return com um aviso
     state = Lock_Game(dts)
@@ -27,9 +30,6 @@ function Top_Opt(T::Int64, dts::AbstractString, Sy::Float64, freq::Float64, alfa
         println("   travado/completo - ",dts)
         return
     end
-
-    # Verifica se existe save file e escolhe o tipo de analise
-    loadf, heavi, max_ext = Check_Game(dts, max_fil, max_hev)
 
     @printf("\n Inicializando...\n\tFinitos....")
 
@@ -89,12 +89,12 @@ function Top_Opt(T::Int64, dts::AbstractString, Sy::Float64, freq::Float64, alfa
 
     #  Se tiver algum save para carregar
     if loadf
-        x, itex, rho, mu_res, csi = Load_Game(dts, heavi)
+        x, itex, rho, mu_res, csi = Load_Game(dts,sub, heavi)
     end
 
     # No caso do filtro completo, para começar o heaviside
     if !loadf && heavi
-        x, itex, rho, mu_res, csi = Load_Game(dts, false)
+        x, itex, rho, mu_res, csi = Load_Game(dts0,sub, false)
         itex = 0
         csi  =csi0
     end
@@ -162,7 +162,7 @@ function Top_Opt(T::Int64, dts::AbstractString, Sy::Float64, freq::Float64, alfa
                     raiof,ID, K0, M0, F, alfa, beta, x, P, q, nos_viz, heavi, SP, vmin)
 
     # Deixa um arquivo para indicar que acabou (no caso do heavi)
-    End_Game(dts,heavi)
+    End_Game(dts)
 
 end
 

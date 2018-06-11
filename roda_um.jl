@@ -47,8 +47,8 @@ function Roda_Um()
     # Parâmetros do Lagrangiano Aumentado (esses vao no casefile, mas nao vao no nome)
     alfa        = 0.0       # Amortecimento Proporcional - Massa
     raiof       = 0.031     # Tamanho do filtro [m]
-    max_fil     = 30        # Máximo de iteracoes externas
-    max_hev     = 30        # Número de iterações com Heaviside
+    max_fil     = 10        # Máximo de iteracoes externas
+    max_hev     = 10        # Número de iterações com Heaviside
     max_int     = 10       # Máximo de iterações internas
     tol_ext     = 1E-6      # Tolerância do laço externo
     tol_int     = 1E-6      # Tolerância do laço interno
@@ -85,19 +85,24 @@ function Roda_Um()
     forcas = [ LX   0.2 LX  0.3 -10000.0    2   ]
 
     # Retorna o nome da analise e já cria o casefile
-    dts = Name_Game(tipoan,freq,alfa,beta,A,P,q,Sy,dini,dmax,QP,csi0,csimul,rho1,rho2,rho3,
+    dts,sub = Name_Game(tipoan,freq,alfa,beta,A,P,q,Sy,dini,dmax,QP,csi0,csimul,rho1,rho2,rho3,
                        raiof,max_fil,max_hev,max_int,tol_ext,tol_int,rho_max)
 
     # Corrige os rhos para um vetor
     rho = [rho1;rho2;rho3]
 
     # Executa.
-    Top_Opt(tipoan, dts, Sy, freq, alfa, beta, R_b, A, dini, max_fil, max_int, tol_ext,
+    Top_Opt(tipoan, dts, sub, Sy, freq, alfa, beta, R_b, A, dini, max_fil, max_int, tol_ext,
               tol_int, rho, rho_max, SP, raiof, vmin, NX, NY, LX, LY,
-            young, poisson, esp, p_dens, presos, forcas, travas, QP, csi0, csimul, dmax, P, q, max_hev)
+            young, poisson, esp, p_dens, presos, forcas, travas, QP, csi0, csimul, dmax, P, q, false)
 
-    # Fim
-    println("  Pronto! \n")
+    println("\n\n\n  Fim da analise com filtro! \n\n")
+
+    Top_Opt(tipoan, dts, sub, Sy, freq, alfa, beta, R_b, A, dini, max_hev, max_int, tol_ext,
+              tol_int, rho, rho_max, SP, raiof, vmin, NX, NY, LX, LY,
+            young, poisson, esp, p_dens, presos, forcas, travas, QP, csi0, csimul, dmax, P, q, true)
+
+    println("\n\n\n  Fim da analise com heaviside! \n\n")
 
 end
 Roda_Um()

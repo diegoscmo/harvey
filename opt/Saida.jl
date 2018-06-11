@@ -140,57 +140,26 @@ end
 #
 #   Verifica se tem um save_file e determina se precisa executar filtro ou heaviside
 #
-function Check_Game(dts, max_fil, max_hev)
+function Check_Game(dts, sub, max_ext, heavi)
 
     # Nome dos arquivos para tentar carregar
-    arq_fil = string("results/",dts,"/f_savefile.txt")
-    arq_hev = string("results/",dts,"/h_savefile.txt")
+    fil_save = string("results/",dts,"/f_savefile.txt")
+    hev_save = string("results/",dts,"/",sub,"/h_savefile.txt")
 
-    # Procura primeiro o save file com filtro
-    if isfile(arq_fil)
+    # Se nao for heaviside, verifica o arquivo e retorna loadf caso tenha algo
+    if !heavi && isfile(fil_save)
 
-        # Procura o número da ultima iteração concluída
-        i_fil = parse(Int64,readlines(arq_fil)[1])
+        loadf = true
 
-        # Se nao concluiu com o filtro, roda o filtro
-        if i_fil < max_fil
+    # Verifica se tem um save heaviside
+    elseif heavi && isfile(hev_save)
 
-            heavi = false
-            loadf = true
+        loadf = true
 
-        # Se ja concluiu com filtro, busca o heaviside
-        elseif i_fil == max_fil
-
-            # Procura o savefile com heaviside
-            if isfile(arq_hev)
-
-                # Independente de concluir ou não, vai executar, se concluiu vai direto pra varreduras
-               heavi = true
-               loadf = true
-
-            # Se nao tiver o arquivo heaviside, aí roda a partir do filtro
-            else
-
-                heavi = true
-                loadf = false
-
-            end #isfile heavi
-
-        end # if i_fil
-
-    # Se não achar nada, roda do zero
+    # Se nao achou nada, entao nao precisa carregar
     else
+        loadf =  false
 
-        heavi = false
-        loadf = false
-
-    end #if isfile filtro
-
-    # Determina o numero de iteracoes de acordo com o tipo
-    if !heavi
-        max_ext = max_fil
-    else
-        max_ext = max_hev
     end
 
     # Se vai ter qualquer tipo de load, o usuario recebe um tempo pra cancelar
@@ -201,21 +170,26 @@ function Check_Game(dts, max_fil, max_hev)
         sleep(5.0)
     end
 
-    return loadf,heavi,max_ext
+    # SE for heaviside, ja atualiza o dts
+    if heavi
+        dts = string(dts,"/",sub)
+    end
+
+    return loadf, dts
 
 end #function
 
 #
 #   Carrega x, itex, csi, rho e mu_res de uma execucao anterior
 #
-function Load_Game(dts, heavi)
+function Load_Game(dts0, sub, heavi)
 
    # Nome do save_file
-   arquivo = string("results/",dts,"/f_savefile.txt")
+   arquivo = string("results/",dts0,"/f_savefile.txt")
 
    # Se for pra heaviside, aí muda o arquivo
    if heavi == true
-       arquivo = string("results/",dts,"/h_savefile.txt")
+       arquivo = string("results/",dts0,"/",sub,"/h_savefile.txt")
    end
 
    # Le arquivo
@@ -257,7 +231,7 @@ end
 #   Recebe os parametros, cria a pasta e o casefile, retorna o nome do arquivo
 #
 function Name_Game(tipoan,freq,alfa,beta,A,P,q,Sy,dini,dmax,QP,csi0,csim,rho1,rho2,rho3,
-                       raiof,max_fil,max_hev,max_int,tol_ext,tol_int,rho_max)
+                       raiof,max_fil,max_hev,max_int,tol_ext,tol_int,rho_max,heavi=true)
 
         # Verifica o tipo de analise pro nome do arquivo
         if tipoan == 1;  tiponome = "NG_"; end
@@ -283,25 +257,31 @@ function Name_Game(tipoan,freq,alfa,beta,A,P,q,Sy,dini,dmax,QP,csi0,csim,rho1,rh
         # COloca dados de tensao so em 3 e 4
         if tipoan != 3 && tipoan != 4
             #  Agrupa para criar algo do tipo "NG__MIN_f180a08p20q20s4E20vi05vm05q15bWc10s12" # b1E-8
-            dts = string(tiponome,minmax,"f",ifreq,"a",A,"p",P,"q",q,"vi",dini,"vm",dmax,"b",beta,"c",csi0,
-                        "cs",csim)
+            dts = string(tiponome,minmax,"f",ifreq,"a",A,"p",P,"q",q,"vi",dini,"vm",dmax,"b",beta)
         else
-            dts = string(tiponome,minmax,"f",ifreq,"a",A,"p",P,"q",q,"vi",dini,"vm",dmax,"b",beta,"c",csi0,
-                                            "cs",csim,"sy",Sy,"q",QP)
+            dts = string(tiponome,minmax,"f",ifreq,"a",A,"p",P,"q",q,"vi",dini,"vm",dmax,"b",beta,"sy",Sy,"q",QP)
         end
+
+        # Nome da pasta interna, heaviside
+        sub = string("c",csi0,"cs",csim)
 
         # Tira os pontos
         dts = replace(dts,"."=>"")
+        sub = replace(sub,"."=>"")
+
+        if !heavi
+            sub = ""
+        end
 
         # Cria diretorio e escreve o case_file
-        New_Game(dts,tipoan,freq,alfa,beta,A,P,q,Sy,dini,dmax,QP,csi0,csim,rho1,rho2,rho3,
+        New_Game(dts,sub,tipoan,freq,alfa,beta,A,P,q,Sy,dini,dmax,QP,csi0,csim,rho1,rho2,rho3,
                                raiof,max_fil,max_hev,max_int,tol_ext,tol_int,rho_max)
 
-       return dts
+       return dts,sub
 
 end
 
-function New_Game(dts,tipoan,freq,alfa,beta,A,P,q,Sy,dini,dmax,QP,csi0,csim,rho1,rho2,rho3,
+function New_Game(dts,sub,tipoan,freq,alfa,beta,A,P,q,Sy,dini,dmax,QP,csi0,csim,rho1,rho2,rho3,
                        raiof,max_fil,max_hev,max_int,tol_ext,tol_int,rho_max)
 
     # Cria o diretorio se nao tiver ainda
@@ -330,14 +310,11 @@ function New_Game(dts,tipoan,freq,alfa,beta,A,P,q,Sy,dini,dmax,QP,csi0,csim,rho1
     println(open_case,"dmax:    ",dmax)
     println(open_case,"Sy:      ",Sy)
     println(open_case,"QP:      ",QP)
-    println(open_case,"csi0:    ",csi0)
-    println(open_case,"csim:    ",csim)
     println(open_case,"rho1:    ",rho1)
     println(open_case,"rho2:    ",rho2)
     println(open_case,"rho3:    ",rho3)
     println(open_case,"raiof:   ",raiof)
     println(open_case,"max_fil: ",max_fil)
-    println(open_case,"max_hev: ",max_hev)
     println(open_case,"max_int: ",max_int)
     println(open_case,"tol_ext: ",tol_ext)
     println(open_case,"tol_int: ",tol_int)
@@ -346,12 +323,32 @@ function New_Game(dts,tipoan,freq,alfa,beta,A,P,q,Sy,dini,dmax,QP,csi0,csim,rho1
     # Fecha
     close(open_case)
 
+    # Cria tambem o diretorio interno caso seja de interesse
+    if sub !=""
+        if !isdir(string("results/",dts,"/",sub))
+            mkdir(string("results/",dts,"/",sub))
+        end
+        # Escreve o case do heavi tambem
+        heav_file = string("results/",dts,"/",sub,"/0_heavifile.txt")
+        if isfile(heav_file); rm(heav_file); end
+
+        heav_case = open(heav_file,"a")
+
+        # Salva as do heavi tambem
+        println(heav_case,"max_hev: ",max_hev)
+        println(heav_case,"csi0:    ",csi0)
+        println(heav_case,"csim:    ",csim)
+
+        close(heav_case)
+
+    end
+
 end
 
 #
 #   Busca o case_file e devolve as variaveis
 #
-function Read_Game(dts)
+function Read_Game(dts,sub="")
 
     # Busca o case_file
     case_file = string("results/",dts,"/0_casefile.txt")
@@ -370,20 +367,34 @@ function Read_Game(dts)
     dmax    = parse(Float64,split(texto[9],':')[2])
     Sy      = parse(Float64,split(texto[10],':')[2])
     QP      = parse(Float64,split(texto[11],':')[2])
-    csi0    = parse(Float64,split(texto[12],':')[2])
-    csim    = parse(Float64,split(texto[13],':')[2])
-    rho1    = parse(Float64,split(texto[14],':')[2])
-    rho2    = parse(Float64,split(texto[15],':')[2])
-    rho3    = parse(Float64,split(texto[16],':')[2])
-    raiof   = parse(Float64,split(texto[17],':')[2])
-    max_fil =   parse(Int64,split(texto[18],':')[2])
-    max_hev =   parse(Int64,split(texto[19],':')[2])
-    max_int =   parse(Int64,split(texto[20],':')[2])
-    tol_ext = parse(Float64,split(texto[21],':')[2])
-    tol_int = parse(Float64,split(texto[22],':')[2])
-    rho_max = parse(Float64,split(texto[23],':')[2])
+    rho1    = parse(Float64,split(texto[12],':')[2])
+    rho2    = parse(Float64,split(texto[13],':')[2])
+    rho3    = parse(Float64,split(texto[14],':')[2])
+    raiof   = parse(Float64,split(texto[15],':')[2])
+    max_fil =   parse(Int64,split(texto[16],':')[2])
+    max_int =   parse(Int64,split(texto[17],':')[2])
+    tol_ext = parse(Float64,split(texto[18],':')[2])
+    tol_int = parse(Float64,split(texto[19],':')[2])
+    rho_max = parse(Float64,split(texto[20],':')[2])
 
-    # Caso especial do beta
+    # Pega o heaviside tambem se tiver
+    if sub != ""
+        # Busca o heav_file tambem
+        heav_file = string("results/",dts,"/",sub,"/0_heavifile.txt")
+
+        texto = readlines(heav_file)
+        # Do heav tambem
+        max_hev =   parse(Int64,split(texto[1],':')[2])
+        csi0    = parse(Float64,split(texto[2],':')[2])
+        csim    = parse(Float64,split(texto[3],':')[2])
+
+    else
+        max_hev = 0
+        csi0 = 0.0
+        csim = 0.0
+    end
+
+    # Caso especial do beta, pode ser definido como string
     if beta != "W"
         beta = parse(Float64,beta)
     end
@@ -423,16 +434,13 @@ function Lock_Game(dts)
 
 end
 
-function End_Game(dts,heavi)
+function End_Game(dts)
 
     lock_file = string("results/",dts,"/.lock")
     done_file = string("results/",dts,"/.done")
 
     if isfile(lock_file); rm(lock_file); end
 
-    if heavi
-        open_done = open(done_file,"a")
-        close(open_done)
-    end
+    close(open(done_file,"a"))
 
 end

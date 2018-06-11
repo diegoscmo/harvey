@@ -58,7 +58,7 @@ function Roda_Todos()
     # Enquanto houver pastas para verificar...
     lista  = 1
     standby = 0
-    while sum(lista) > 0
+    while true
 
         println("\n   Varrendo diretorios...")
 
@@ -66,28 +66,51 @@ function Roda_Todos()
         cd("results")
 
         # Acumula as pastas, arquivos etc
-        diretorios = [];
+        all_dirs = [];
         for (root,dirs,files) in walkdir(".")
-                push!(diretorios,dirs)
+            push!(all_dirs,dirs)
         end
+
+        # Remove os strings vazios que aparecem com essa funcao
+        filter!(e->e!=String[],all_dirs)
+
+        # Monta a lista de diretorios, com os externos primeiro e depois os internos
+        diretorios = all_dirs[1]
+
+        # Numero de diretorios externos
+        n_ext = length(diretorios)
+
+        # varre cada lista de diretorios internos
+        for j = 2:size(all_dirs,1)
+
+            # Monta a base do nome dos diretorios internos de j
+            basedir = all_dirs[1][j-1]
+
+            # Pra cada um da lista de diretorios internos
+            for k = 1:size(all_dirs[j],1)
+
+                push!(diretorios,string(basedir,"/",all_dirs[j][k]))
+
+            end
+
+        end
+
+        # Numero de diretorios, total e internos
+        n_tot = length(diretorios)
+        n_int = n_tot - n_ext
 
         # E retorna para o nivel anterior
         cd("..")
 
-        # Separa só os diretorios
-        diretorios = diretorios[1]
-
-        # Numero de diretorios
-        nd = length(diretorios)
-
-        println("   ",nd," diretorios encontrados...")
+        println("   ",n_ext," diretorios externos encontrados...")
+        println("   ",n_int," diretorios internos encontrados...")
 
         # Lista dos diretorios numerados
-        lista = collect(1:nd)
+        lista = collect(1:n_tot)
 
         # Primeiro loop interno
         # Remove diretorios completos ou travados
-        for j=1:nd
+        for j=1:n_tot
 
             # Renomeia o diretorio de trabalho
             dts = diretorios[j]
@@ -106,12 +129,15 @@ function Roda_Todos()
 
         end
 
-        nz = count(!iszero, lista)
+        # Verifica a quantidade de diretorios disponiveis
+        disp_ext = count(!iszero, lista[1:n_ext])
+        disp_int = count(!iszero, lista[n_ext+1:n_tot])
 
-        println("   ",nz," diretorios disponiveis...")
+        println("   ",disp_ext," diretorios externos disponiveis...")
+        println("   ",disp_int," diretorios internos disponiveis...")
 
-        # Agora podemos calcular nos diretorios livres
-        for j in lista
+        # Agora podemos calcular nos diretorios externos livres
+        for j in lista[1:n_ext]
             if j != 0
 
                 # Pega o nome da pasta para rodar
@@ -123,30 +149,77 @@ function Roda_Todos()
                 # Arruma rho
                 rho = [rho1;rho2;rho3]
 
-                println("   Rodando diretorio - [",j,"/",nd,"]")
+                println("   Rodando diretorio externo - [",j,"/",n_ext,"]")
 
-                # Executa.
-                Top_Opt(tipoan, dts, Sy, freq, alfa, beta, R_b, A, dini, max_fil, max_int, tol_ext,
+                # Executa sem heaviside
+                Top_Opt(tipoan, dts, "", Sy, freq, alfa, beta, R_b, A, dini, max_fil, max_int, tol_ext,
                           tol_int, rho, rho_max, SP, raiof, vmin, NX, NY, LX, LY,
-                        young, poisson, esp, p_dens, presos, forcas, travas, QP, csi0, csim, dmax, P, q, max_hev)
+                        young, poisson, esp, p_dens, presos, forcas, travas, QP, csi0, csim, dmax, P, q, false)
+
             end
         end
 
-        # Toda vez que iterar vai rever a lista, só vai parar quando todos estiverem lock ou done.
+        # Toda vez que iterar vai rever a lista. Quando todos os externos estiverem com lock ou done, aí vamos
+        # para a parte de rodar os internos
 
-        # Caso nao houver nada disponivel
-        if nz == 0
+        # Aqui um cuidado especial é necessário para não rodar um interno que ainda não tem o seu externo concluído..
 
-            # Itera o numero de standby, se passou de 5, fecha
-            standby += 1
-            if standby >= 5
-                exit()
+        # Caso nao houver nada disponivel, aí entramos em pastas individuais para varrer os heavisides
+        if disp_ext == 0
+
+            # Agora podemos calcular nos diretorios externos livres
+            for j in lista[n_ext+1:n_tot]
+                if j != 0
+
+                    # Pega o nome da pasta para rodar
+                    dts = diretorios[j]
+
+                    # Arruma o dts e o sub
+                    dts,sub = split(dts,"/")
+
+                    # Carrega as variaveis
+                    tipoan,freq,alfa,beta,A,P,q,Sy,dini,dmax,QP,csi0,csim,rho1,rho2,rho3,
+                                           raiof,max_fil,max_hev,max_int,tol_ext,tol_int,rho_max = Read_Game(dts,sub)
+
+                    # Arruma rho
+                    rho = [rho1;rho2;rho3]
+
+                    # pra verificar se o arquivo com filtro acabou...
+                    done_file = string("results/",dts,"/.done")
+
+                    if isfile(done_file)
+
+                        println("   Rodando diretorio interno - [",j-n_ext,"/",n_int,"]")
+
+                        # Executa com heaviside
+                        Top_Opt(tipoan, dts, sub, Sy, freq, alfa, beta, R_b, A, dini, max_hev, max_int, tol_ext,
+                                tol_int, rho, rho_max, SP, raiof, vmin, NX, NY, LX, LY,
+                                young, poisson, esp, p_dens, presos, forcas, travas, QP, csi0, csim, dmax, P, q, true)
+                    else
+
+                        println("   Falta calcular externo! - [",j-n_ext,"/",n_int,"]")
+                        disp_int = disp_int - 1
+
+                    end
+
+                end
             end
 
-            # Caso contrario espera 20min
-            println("   Mais nada para calcular, StandBy por 20min... [",standby,"/5]\n")
-            sleep(20.0*60.0)
+            # Finalmente, quando nao tiver nenhum externo e interno disponivel, damos um 10
+            if disp_int == 0
+                # Itera o numero de standby, se passou de 5, fecha
+                standby += 1
+                if standby >= 5
+                    exit()
+                end
+
+                # Caso contrario espera 20min
+                println("   Mais nada para calcular, StandBy por 20min... [",standby,"/5]\n")
+                sleep(20.0*60.0)
+            end
+
         end
+
     end # while
 
 end # function
