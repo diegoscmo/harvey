@@ -71,26 +71,28 @@ function Roda_Todos()
             push!(all_dirs,dirs)
         end
 
-        # Remove os strings vazios que aparecem com essa funcao
-        filter!(e->e!=String[],all_dirs)
-
         # Monta a lista de diretorios, com os externos primeiro e depois os internos
         diretorios = all_dirs[1]
 
         # Numero de diretorios externos
         n_ext = length(diretorios)
 
-        # varre cada lista de diretorios internos
-        for j = 2:size(all_dirs,1)
+        # Copia para rodar os laços internos
+        ext_dirs = copy(diretorios)
 
-            # Monta a base do nome dos diretorios internos de j
-            basedir = all_dirs[1][j-1]
+        # Para cada externo, varre se tem internos
+        for dr in ext_dirs
 
-            # Pra cada um da lista de diretorios internos
-            for k = 1:size(all_dirs[j],1)
+            cd(dr)
+            sub_dirs = [];
+            for (root,dirs,files) in walkdir(".")
+                push!(sub_dirs,dirs)
+            end
+            cd("..")
 
-                push!(diretorios,string(basedir,"/",all_dirs[j][k]))
-
+            # Varre incluindo nos diretorios
+            for sdr in sub_dirs[1]
+                push!(diretorios,string(dr,"/",sdr))
             end
 
         end

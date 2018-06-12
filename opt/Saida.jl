@@ -340,7 +340,6 @@ function New_Game(dts,sub,tipoan,freq,alfa,beta,A,P,q,Sy,dini,dmax,QP,csi0,csim,
         println(heav_case,"csim:    ",csim)
 
         close(heav_case)
-
     end
 
 end

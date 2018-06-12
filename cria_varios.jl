@@ -17,20 +17,20 @@ function Cria_Varios()
     tipoan      = [1]
 
     # Parâmetros da Função Objetivo, esses todos vao no nome
-    freq        = [180.0]   # Frequência de excitação
-    beta        = ["W"]       # Amortecimento Proporcional - Rigidez
-    A           = [0.99]      # Peso da primeira Fobj (negativo para resonant)
-    P           = [2.0]       # Parâmetros da Norma
+    freq        = [180.0;270.0;600.0;750.0]   # Frequência de excitação
+    beta        = ["W";1E-8]       # Amortecimento Proporcional - Rigidez
+    A           = [0.99;0.999;0.95]      # Peso da primeira Fobj (negativo para resonant)
+    P           = [2.0; 4.0]       # Parâmetros da Norma
     q           = [2.0]       #
     Sy          = [4E20]      # Tensão limite
-    dini        = [0.50; 1.00]      # Volume inicial R=1 #0.52631277505 600@0.1w 0.532239322199 @ 600@1E-8b
+    dini        = [0.50;1.0]      # Volume inicial R=1 #0.52631277505 600@0.1w 0.532239322199 @ 600@1E-8b
     dmax        = [0.50]      # Restrição de volume  F=1 #0.41345415 600@1E-8b
     QP          = [1.50]      # Relaxação da tensão
     csi0        = [1.0; 5.0; 10.0]       # Primeiro valor do Heaviside
     csim        = [1.2 ; 1.3; 1.4; 1.5]      # Multiplicador do heaviside
 
     # Se nao quiser criar casos heaviside, deixe false!
-    heavi = true
+    heavi = false
 
     V = collect(product(tipoan,freq,beta,A,P,q,Sy,dini,dmax,QP,csi0,csim))
 
@@ -65,3 +65,4 @@ function Cria_Varios()
 
 end
 Cria_Varios()
+sleep(10)
