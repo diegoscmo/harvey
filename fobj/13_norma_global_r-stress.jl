@@ -28,11 +28,11 @@ function F_Obj3(x::Array{Float64,1}, rho::Array{Float64,1}, mult_res::Array{Floa
     # Resolve o sistema dinamico
     w  = 2.0*pi*freq
     KD = KG + w*im*(alfa*MG + beta*KG) - (w^2.0)*MG
-    KDf = lufact(KD)
+    KDf = lu(KD)
     UD = vec(KDf\F)
 
     # Resolve o sistema estático
-    KSf = cholfact(Symmetric(KG))
+    KSf = cholesky(Symmetric(KG))
     US = vec(KSf\F)
 
     # Gera um vetor com as "normas nodais de densidade"
