@@ -67,7 +67,7 @@ function Harmonica(dts,freq,x,csi,nnos,nel,coord,ijk,ID,vizi,nviz,dviz,raiof,alf
     KD = sparse(K - (w^2.0)*M + w*im*(alfa*M + beta*K))
 
     # Soluciona o sistema... como não é Hermitiana, vamos com LU
-    UD = vec(lufact(KD)\F)
+    UD = vec(lu(KD)\F)
 
    # Expande o modo
    desloc = real(Expande_Vetor(UD, nnos, ID))
@@ -97,7 +97,7 @@ function Analise_Harmonica(freq,K0,M0,nel, csi, nnos,ijk,ID,coord,vizi, nviz, dv
     KD = sparse(K - (w^2.0)*M + w*im*(alfa*M + beta*K))
 
     # Soluciona o sistema... como não é Hermitiana, vamos com LU
-    UD = vec(lufact(KD)\F)
+    UD = vec(lu(KD)\F)
 
     # Vamos gravar os modos para um arquivo de visualização no gmsh
     if dts != ""
@@ -235,7 +235,7 @@ function Varredura_Graph(dts, fvarredura,
         KD = sparse(K - (w^2.0)*M + w*im*C)
 
         # Soluciona o sistema... como não é Hermitiana, vamos com LU
-        UD = vec(lufact(KD)\F)
+        UD = vec(lu(KD)\F)
 
         # Verifica o condicionamento na frequência
     #    cond = Checa_Cond(KD,1E-4,1000)
