@@ -89,7 +89,7 @@ function Top_Opt(T::Int64, dts0::AbstractString, sub::AbstractString, Sy::Float6
 
     #  Se tiver algum save para carregar
     if loadf
-        x, itex, rho, mu_res, csi = Load_Game(dts,sub, heavi)
+        x, itex, rho, mu_res, csi = Load_Game(dts0,sub, heavi)
     end
 
     # No caso do filtro completo, para começar o heaviside
